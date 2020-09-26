@@ -6,3 +6,5 @@ pymysql
 sqlalchemy
 alembic
 asyncio-mqtt
+flask
+Flask-Discord

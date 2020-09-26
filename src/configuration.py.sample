@@ -18,7 +18,8 @@ CONFIG = yaml.load("""
 database_url: 'mysql://rrbot:rrbot@localhost:3306/rrbot...'
 mqtt_url: 'localhost'
 discord_client_id: 1234567890
-discord_client_secret: 'put your token here'
+discord_client_secret: 'put your client secret here'
+discord_bot_token: 'put your token here'
 default_command_prefix: '='
 admins:
   - 290829729458814977 # Q
@@ -38,7 +39,9 @@ CONFIG['prefixes'] = PREFIXES = {}
 
 DB_URL = CONFIG['database_url']
 MQTT_URL = CONFIG['mqtt_url']
-TOKEN = CONFIG['discord_client_secret']
+CLIENTID = CONFIG['discord_client_id']
+SECRET = CONFIG['discord_client_secret']
+TOKEN = CONFIG['discord_bot_token']
 PREFIX = CONFIG['default_command_prefix'].lower()
 ADMINS = CONFIG['admins']
 LOG_LEVEL = CONFIG['log_level']
@@ -46,19 +49,12 @@ LOG_LEVEL = CONFIG['log_level']
 
 def update_live_prefix(id, prefix):
     global PREFIXES
-    print(PREFIXES)
     current_prefix = PREFIXES.get(id, None)
-    print('Update Prefix {} => {}, old => {}'.format(id, prefix, current_prefix))
     if prefix != current_prefix:
-        print("Differs")
         if prefix is None:
-            print('NONE')
             PREFIXES.delete(id)
         else:
-            print('CHANGE')
             PREFIXES[id] = prefix
-    else:
-        print('DAFUQ\n???\n???\n???')
 
 
 if __name__ == "__main__":
