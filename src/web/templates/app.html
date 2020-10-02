@@ -1,0 +1,17 @@
+<html>
+  <head>
+    <title>{{user.name}}</title>
+  </head>
+  <body>
+    <h1>{{user.name}}#{{user.discriminator}}</h1>
+    <img src="{{user.avatar_url}}" />
+
+    {% if guilds is not none %}
+    <ul>
+      {% for guild in guilds %}
+      <li>{{guild.name}} (ID: {{guild.id}})</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </body>
+</html>
