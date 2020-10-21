@@ -6,7 +6,7 @@ This is the main routing file for RR Bot's web administrative functionality
 import os, functools
 
 from configuration import APP_SECRET, TOKEN, SECRET, CLIENTID, CALLBACK_ROOT, LOG_LEVEL, ADMINS
-from flask import Flask, redirect, url_for, g, abort, render_template, session
+from flask import Flask, redirect, url_for, g, abort, render_template, session, jsonify, request
 from flask_discord import DiscordOAuth2Session, requires_authorization, Unauthorized
 from web import contexts
 
@@ -24,6 +24,10 @@ app.config['DISCORD_REDIRECT_URI'] = f'{CALLBACK_ROOT}/callback/'
 app.config['DISCORD_BOT_TOKEN'] = TOKEN
 
 discord = DiscordOAuth2Session(app)
+
+# verify the database
+from db import db_test
+db_test()
 
 
 """
@@ -43,19 +47,19 @@ Discord OAuth2 workflow
 def redirect_unauthorized(e):
     return redirect(url_for('.index'))
 
-@app.route('/login')
+@app.route('/login/')
 def login():
     return discord.create_session()
 
-@app.route('/callback')
+@app.route('/callback/')
 def callback():
     discord.callback()
-    return redirect(url_for('app'))
+    return redirect(url_for('.app_index'))
 
-@app.route('/logout')
+@app.route('/logout/')
 def logout():
     discord.revoke()
-    return redirect(url_for('.app_index'))
+    return redirect(url_for('.index'))
 
 
 """
@@ -66,14 +70,11 @@ class NotAnAdmin(Exception):
     def __init__(self):
         super().__init__('This requires administrative access')
 
-def requires_administrator_context(*opts):
-    # fake default args
-    if not opts:
-        opts = ['user']
-
+def route_with_admin_context(*route_args, **route_kwargs):
     def predicate(func):
-        @functools.wraps(func)
+        @app.route(*route_args, **route_kwargs)
         @requires_authorization
+        @functools.wraps(func)
         def context_wrapper(*args, **kwargs):
             user = discord.fetch_user()
             if user.id in ADMINS:
@@ -88,8 +89,7 @@ def redirect_not_an_admin(e):
     session
     return redirect(url_for('.logout'))
 
-@app.route('/app/')
-@requires_administrator_context()
+@route_with_admin_context('/app/')
 def app_index(ctx):
     return render_template('app.html', **ctx)
 
