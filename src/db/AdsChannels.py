@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Boolean, BigInteger, String, JSON, event
+from sqlalchemy import Column, Boolean, BigInteger, String, DateTime, JSON
 from . import Base
+from datetime import datetime
 
 class AdsChannels(Base):
     __tablename__ = 'ads_channels'
@@ -13,8 +14,20 @@ class AdsChannels(Base):
     # is this channel for server ads (True) or personal ads (False)
     invites = Column(Boolean, nullable=False, default=True)
 
-    # is this channel currently being tracked
-    active = Column(Boolean, nullable=False, default=False)
+    # is this channel currently reporting ads (None means disabled)
+    webhook_url = Column(String(255), nullable=True, default=None)
+
+    # preserve this channel for auditing but mark as gone
+    deleted_at = Column(DateTime, nullable=True, default=None)
 
     # Storing Ad-hoc data made easy
     jsondata = Column(JSON)
+
+    def delete(self):
+        self.webhook_url = None
+        self.deleted_at = datetime.now()
+
+
+def is_active_ads_channel(session, channel):
+    # TODO: query for WHERE id=channel.id AND active=True
+    pass

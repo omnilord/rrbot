@@ -61,6 +61,9 @@ utilities
 """
 
 def get_or_create(session, model, **kwargs):
+    """
+    A fetch or create function for ensure methods
+    """
     instance = session.query(model).filter_by(**kwargs).first()
     if not instance:
         instance = model(**kwargs)
