@@ -100,7 +100,7 @@ async def send_notify(msg, channel, db_session, username='RR Bot'):
     Call the webhook associated with the channel to create a
     notification message.
     """
-    if channel.webhook_url is None:
+    if channel is None or channel.webhook_url is None:
         return
 
     async with aiohttp.ClientSession() as wh_session:
@@ -135,9 +135,9 @@ def setup(bot):
 
         if channel is not None:
             ad = await AdsMessages.from_discord_message(db_session, message)
-            server = db.ensure_server(db_session, message.guild.id)
-            notice = render_ad_notice(ad, message, channel, server.timezone)
-            await send_notify(notice, channel, db_session, 'New Ad')
+            server = ensure_server(db_session, message.guild.id)
+            #notice = render_ad_notice(ad, message, channel, server.timezone)
+            #await send_notify(notice, channel, db_session, 'New Ad')
 
         db_session.close()
 
@@ -156,13 +156,15 @@ def setup(bot):
     @bot.listen()
     async def on_raw_message_delete(message):
         db_session = Session()
-        ad = db_session.query(AdsMessages).filter_by(id=message.id).one_or_none()
+        ad = db_session.query(AdsMessages).filter_by(id=message.message_id).one_or_none()
+        channel = db_session.query(AdsChannels).filter_by(id=message.channel_id).one_or_none()
 
         if ad is not None:
             ad.delete()
             db_session.commit()
-            server = db.ensure_server(db_session, message.guild.id)
+            server = ensure_server(db_session, message.guild_id)
             notice = render_ad_deleted(ad, server.timezone)
+            print("**********\n{}\n**********".format(notice))
             await send_notify(notice, channel, db_session, 'Ad Deleted')
             
         db_session.close()
@@ -180,9 +182,9 @@ def setup(bot):
             channel.delete()
             ads.update({ 'deleted_at': channel.deleted_at })
             db_session.commit()
-            server = db.ensure_server(db_session, message.guild.id)
-            notice = render_channel_deleted(channel, ads_count, server.timezone)
-            await send_notify(notice, channel, db_session, 'Channel Deleted')
+            server = ensure_server(db_session, message.guild.id)
+            #notice = render_channel_deleted(channel, ads_count, server.timezone)
+            #await send_notify(notice, channel, db_session, 'Channel Deleted')
 
         db_session.close()
 

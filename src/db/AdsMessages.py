@@ -54,24 +54,26 @@ class AdsMessages(Base):
                 data['invite_server_name'] = invite.guild.name
                 data['invite_expires_at'] = dt
             except NotFound:
+                data['invite_count'] = 0
                 pass
         return data
 
 
-    def fields_from_discord_message(message):
+    async def fields_from_discord_message(message):
+        invite_data = await AdsMessages.invite_from_discord_message(message)
         return {
             id: message.id,
-            server_id: message.server.id,
-            channel_id: message.channel.id,
-            author_id: message.author.id,
-            created_at: message.created_at,
-            updated_at: message.edited_at,
-            **invite_from_discord_message(message)
+            'server_id': message.guild.id,
+            'channel_id': message.channel.id,
+            'author_id': message.author.id,
+            'created_at': message.created_at,
+            'updated_at': message.edited_at,
+            **invite_data
         }
 
 
     async def from_discord_message(session, message):
-        fields = await fields_from_discord_message(message)
+        fields = await AdsMessages.fields_from_discord_message(message)
         instance = session.query(AdsMessages).filter_by(id=message.id).first()
         if not instance:
             instance = AdsMessages(fields)

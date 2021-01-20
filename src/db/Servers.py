@@ -19,6 +19,8 @@ class Servers(Base):
     # Storing Ad-hoc data made easy
     jsondata = Column(JSON)
 
+    timezone = Column(String(32), nullable=True, default='America/New_York')
+
 
 @event.listens_for(Servers, 'after_update')
 def receive_after_update(mapper, connection, server):
