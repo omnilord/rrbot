@@ -33,6 +33,40 @@ class AdsMessages(Base):
         self.deleted_at = datetime.now()
         self.delete_by_id = who_id
 
+    async def discord_author(self, bot):
+        try:
+            return self.discord_author
+        except AttributeError:
+            if bot is None:
+                return None
+            self.discord_author = await bot.fetch_user(self.author_id)
+            return self.discord_author
+
+    async def discord_channel(self, bot):
+        try:
+            return self.discord_channel
+        except AttributeError:
+            if bot is None:
+                return None
+            self.discord_channel = await bot.fetch_channel(self.id)
+            return self.discord_channel
+
+    async def discord_server(self, bot):
+        try:
+            return self.discord_server
+        except AttributeError:
+            if bot is None:
+                return None
+            self.discord_server = await bot.fetch_guild(self.guild_id)
+            return self.discord_server
+
+    async def discord_invite(self, bot):
+        try:
+            self.invite = await bot.fetch_invite(code)
+        except NotFound:
+            return None
+
+
 
     async def invite_from_discord_message(message):
         regexp = re.compile('https?://(?:discord.gg|(?:discord|discordapp).com/invite)/(?P<code>\w+)')

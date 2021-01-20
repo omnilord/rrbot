@@ -7,11 +7,12 @@ from db import (
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from discord import Webhook, AsyncWebhookAdapter
-import aiohttp, asyncio
+import aiohttp, asyncio, logging
 
 OUTPUT_DATETIME_FORMAT = '%A, %D %T%p %Z'
 
 # These are temporary templates, planning to migrate to embeds at a later date.
+#INVITE TEMPLATES
 NO_INVITE_PROVIDED = "\nNO INVITE.\n"
 GOOD_INVITE_TEMPLATE = """
 server: `{ad.invite_server_name}`
@@ -26,17 +27,28 @@ server: `{ad.invite_server_name}`
 _**expiring soon: `{expires_at}**_`
 """
 EXTRA_INVITES_TEMPLATE = 'There were {ad.invite_code} invites attached to this ad.'
+
+# MESSAGE TEMPLATES
 NEW_MESSAGE_TEMPLATE = """
-{ts} in {channel_name}
-Author: `{author}`
-Channel: {channel}
+{ts}
+Channel: {channel_name} {(channel})
+Author: {author}
 {invite}
 {timers}
 Message: {url}
 """
-DELETED_MESSAGE_TEMPLATE = """
-'<todo: what info when an ad is deleted...>'
+EDITED_MESSAGE_TEMPLATED = """
+<todo>
 """
+DELETED_MESSAGE_TEMPLATE = """
+{ts}
+Channel: {channel_name} {(channel})
+Author: {author}
+{invite}
+Message ID: {id}
+"""
+
+# CHANNEL TEMPLATES
 DELETED_CHANNEL_TEMPLATE = 'Channel `{name}` was deleted with {count} active ads.'
 
 
@@ -82,14 +94,22 @@ def render_ad_notice(ad, message, channel, tzone_name=None):
         ts=datetime.now(tz).strftime(OUTPUT_DATETIME_FORMAT),
         channel_name=channel.name,
         author=message.author.mention,
-        channel=message.channel.jump_url,
+        channel=message.channel.mention,
         invite=render_invite(ad, tz),
         timers=render_timers(ad, tz),
         url=message.jump_url
     )
 
-def render_ad_deleted(ad, tzone_name=None):
-    return DELETED_MESSAGE_TEMPLATE.format(ad=ad)
+def render_ad_deleted(ad, channel, bot, tzone_name=None):
+    tz = get_tz(tzone_name)
+    return DELETED_MESSAGE_TEMPLATE.format(
+        ts=ad.deleted_at.astimezone(tz).strftime(OUTPUT_DATETIME_FORMAT),
+        channel_name=channel.name,
+        author=f"<@{ad.author_id}> (id: {ad.author_id})",
+        channel=f"<#{channel.id}>",
+        invite='<todo: info about invite, if present>', #render_invite(ad, tz),
+        id=ad.id
+    )
 
 def render_channel_deleted(channel, count, tzone_name=None):
     return DELETED_CHANNEL_TEMPLATE.format(name=channel.name, count=count)
@@ -118,7 +138,7 @@ async def send_notify(msg, channel, db_session, username='RR Bot'):
 """
 
 def setup(bot):
-    print('Loading `on_ready` listener for ads handler')
+    logging.info('Loading `on_ready` listener for ads handler')
     @bot.listen()
     async def on_ready():
         # TODO: step 1 - verify ads_channels are still present, set deleted otherwise
@@ -127,9 +147,12 @@ def setup(bot):
         pass
 
 
-    print('Loading `on_message` listener for ads handler')
+    logging.info('Loading `on_message` listener for ads handler')
     @bot.listen()
     async def on_message(message):
+        if message.author.id == bot.user.id:
+            return
+
         db_session = Session()
         channel = db_session.query(AdsChannels).filter_by(id = message.channel.id).one_or_none()
 
@@ -142,9 +165,12 @@ def setup(bot):
         db_session.close()
 
 
-    print('Loading `on_raw_message_edit` listener for ads handler')
+    logging.info('Loading `on_raw_message_edit` listener for ads handler')
     @bot.listen()
     async def on_raw_message_edit(message):
+        if message.author.id == bot.user.id:
+            return
+
         # TODO: call ads_messages.edit(message) if message.channel in ads.channels
         #    this call _really_ needs to debounce on send_notify such that only
         #    one notification is set to control every 2 or 3 minutes if someone is
@@ -152,29 +178,28 @@ def setup(bot):
         pass
 
 
-    print('Loading `on_raw_message_delete` listener for ads handler')
+    logging.info('Loading `on_raw_message_delete` listener for ads handler')
     @bot.listen()
-    async def on_raw_message_delete(message):
+    async def on_raw_message_delete(payload):
         db_session = Session()
-        ad = db_session.query(AdsMessages).filter_by(id=message.message_id).one_or_none()
-        channel = db_session.query(AdsChannels).filter_by(id=message.channel_id).one_or_none()
+        ad = db_session.query(AdsMessages).filter_by(id=payload.message_id).one_or_none()
+        channel = db_session.query(AdsChannels).filter_by(id=payload.channel_id).one_or_none()
 
         if ad is not None:
             ad.delete()
             db_session.commit()
-            server = ensure_server(db_session, message.guild_id)
-            notice = render_ad_deleted(ad, server.timezone)
-            print("**********\n{}\n**********".format(notice))
+            server = ensure_server(db_session, payload.guild_id)
+            notice = render_ad_deleted(ad, channel, bot, server.timezone)
             await send_notify(notice, channel, db_session, 'Ad Deleted')
             
         db_session.close()
 
 
-    print('Loading `on_guild_channel_delete` listener for ads handler')
+    logging.info('Loading `on_guild_channel_delete` listener for ads handler')
     @bot.listen()
-    async def on_guild_channel_delete(d_channel):
+    async def on_guild_channel_delete(discord_channel):
         db_session = Session()
-        channel = db_session.query(AdsChannels).filter_by(id=d_channel.id).one_or_none()
+        channel = db_session.query(AdsChannels).filter_by(id=discord_channel.id).one_or_none()
 
         if channel is not None:
             ads = db_session.query(AdsMessages).filter_by(channel_id=channel.id, deleted_at=None)
@@ -189,8 +214,11 @@ def setup(bot):
         db_session.close()
 
 
-    print('Loading `on_member_remove` listener for ads handler')
+    logging.info('Loading `on_member_remove` listener for ads handler')
     @bot.listen()
     async def on_member_remove(member):
+        if member.id == bot.user.id:
+            return
+
         # TODO check for ads by this member, then notify
         pass

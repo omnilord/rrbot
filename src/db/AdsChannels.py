@@ -27,6 +27,16 @@ class AdsChannels(Base):
         self.webhook_url = None
         self.deleted_at = datetime.now()
 
+    def discord_channel(self, bot):
+        try:
+            return self.discord_channel
+        except AttributeError:
+            if bot is None:
+                return None
+            self.discord_channel = bot.get_channel(self.id)
+            return self.discord_channel
+
+
 
 def is_active_ads_channel(session, channel):
     # TODO: query for WHERE id=channel.id AND active=True
