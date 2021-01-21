@@ -9,7 +9,9 @@ from zoneinfo import ZoneInfo
 from discord import Webhook, AsyncWebhookAdapter
 import aiohttp, asyncio, logging
 
+
 OUTPUT_DATETIME_FORMAT = '%A, %D %T%p %Z'
+
 
 # These are temporary templates, planning to migrate to embeds at a later date.
 #INVITE TEMPLATES
@@ -27,6 +29,7 @@ server: `{ad.invite_server_name}`
 _**expiring soon: `{expires_at}**_`
 """
 EXTRA_INVITES_TEMPLATE = 'There were {ad.invite_code} invites attached to this ad.'
+
 
 # MESSAGE TEMPLATES
 NEW_MESSAGE_TEMPLATE = """
@@ -47,6 +50,7 @@ Author: {author}
 {invite}
 Message ID: {id}
 """
+
 
 # CHANNEL TEMPLATES
 DELETED_CHANNEL_TEMPLATE = 'Channel `{name}` was deleted with {count} active ads.'
@@ -107,7 +111,7 @@ def render_ad_deleted(ad, channel, bot, tzone_name=None):
         channel_name=channel.name,
         author=f"<@{ad.author_id}> (id: {ad.author_id})",
         channel=f"<#{channel.id}>",
-        invite='<todo: info about invite, if present>', #render_invite(ad, tz),
+        invite=render_invite(ad, tz),
         id=ad.id
     )
 
@@ -139,6 +143,7 @@ async def send_notify(msg, channel, db_session, username='RR Bot'):
 
 def setup(bot):
     logging.info('Loading `on_ready` listener for ads handler')
+
     @bot.listen()
     async def on_ready():
         # TODO: step 1 - verify ads_channels are still present, set deleted otherwise
@@ -148,6 +153,7 @@ def setup(bot):
 
 
     logging.info('Loading `on_message` listener for ads handler')
+
     @bot.listen()
     async def on_message(message):
         if message.author.id == bot.user.id:
@@ -166,6 +172,7 @@ def setup(bot):
 
 
     logging.info('Loading `on_raw_message_edit` listener for ads handler')
+
     @bot.listen()
     async def on_raw_message_edit(message):
         if message.author.id == bot.user.id:
@@ -179,6 +186,7 @@ def setup(bot):
 
 
     logging.info('Loading `on_raw_message_delete` listener for ads handler')
+
     @bot.listen()
     async def on_raw_message_delete(payload):
         db_session = Session()
@@ -191,11 +199,12 @@ def setup(bot):
             server = ensure_server(db_session, payload.guild_id)
             notice = render_ad_deleted(ad, channel, bot, server.timezone)
             await send_notify(notice, channel, db_session, 'Ad Deleted')
-            
+
         db_session.close()
 
 
     logging.info('Loading `on_guild_channel_delete` listener for ads handler')
+
     @bot.listen()
     async def on_guild_channel_delete(discord_channel):
         db_session = Session()
@@ -215,6 +224,7 @@ def setup(bot):
 
 
     logging.info('Loading `on_member_remove` listener for ads handler')
+
     @bot.listen()
     async def on_member_remove(member):
         if member.id == bot.user.id:

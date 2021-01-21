@@ -28,6 +28,7 @@ admins:
 mod_roles:
   - 694253939734085732 # @staff
 log_level: 'INFO'
+debug_channel: 1234567890....
 """, Loader=yaml.FullLoader)
 
 CONFIG['rootpath'] = ROOT     = Path(__file__).parent.absolute().parent
@@ -40,6 +41,7 @@ TOKEN = CONFIG['discord_client_secret']
 PREFIX = CONFIG['default_command_prefix'].lower()
 ADMINS = CONFIG['admins']
 LOG_LEVEL = CONFIG['log_level']
+DEBUG_CHANNEL = CONFIG['debug_channel']
 
 
 def update_live_prefix(id, prefix):

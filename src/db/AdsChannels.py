@@ -31,8 +31,6 @@ class AdsChannels(Base):
         try:
             return self.discord_channel
         except AttributeError:
-            if bot is None:
-                return None
             self.discord_channel = bot.get_channel(self.id)
             return self.discord_channel
 

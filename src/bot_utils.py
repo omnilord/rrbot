@@ -1,6 +1,7 @@
 import os, sys, logging
-from configuration import ADMINS, PREFIXES, PREFIX
+from configuration import ADMINS, PREFIXES, PREFIX, DEBUG_CHANNEL
 from discord.ext import commands
+from discord import NotFound, Forbidden, HTTPException, InvalidData
 from pathlib import Path
 from db import Session, bot_session, Servers, Channels, Users, Roles
 from functools import wraps
@@ -22,16 +23,16 @@ def load_prefixes():
     prefix_list = Servers.prefixed(bot_session)
     if prefix_list:
         for server in prefix_list:
-            print('prefix {} => {}'.format(server.id, server.prefix))
+            logging.debug('server prefix {} => {}'.format(server.id, server.prefix))
             PREFIXES[server.id] = server.prefix
 
     prefix_list = Channels.prefixed(bot_session)
     if prefix_list:
         for channel in prefix_list:
-            print('prefix {} => {}'.format(channel.id, channel.prefix))
+            logging.debug('channel prefix {} => {}'.format(channel.id, channel.prefix))
             PREFIXES[channel.id] = channel.prefix
 
-    print('Preloaded prefixes:\n{}'.format(PREFIXES))
+    logging.info('Preloaded prefixes:\n{}'.format(PREFIXES))
 
 def prefix_operator(bot, message):
     channel_id = message.channel.id
@@ -111,3 +112,16 @@ def cog_db_wrapper(fn):
 
 def db_session(cog=False, db_errors_silent=True):
     return cog_db_wrapper(db_errors_silent) if cog else cmd_db_wrapper(db_errors_silent)
+
+async def bot_fetch(fn, *args, **kwargs):
+    try:
+        return await fn(*args, **kwargs)
+    except (NotFound, Forbidden, HTTPException, InvalidData):
+        return None
+
+async def notify_debug(bot, msg):
+    channel = await bot_fetch(bot.fetch_channel, DEBUG_CHANNEL)
+    if channel is None:
+        logging.warning('Unable to send message to debug channel `{}`:\n{}'.format(DEBUG_CHANNEL, msg))
+    else:
+        await channel.send('I am alive!')

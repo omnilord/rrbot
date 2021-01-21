@@ -1,6 +1,9 @@
+import logging
+from bot_utils import notify_debug
+
 def setup(bot):
-    print('Loading generic `on_ready` event')
+    logging.info('Loading generic `on_ready` event')
     @bot.event
     async def on_ready():
-        channel = await bot.fetch_channel(738599835359510648)
-        await channel.send('I am alive!')
+        await notify_debug(bot, 'I am alive!')
+

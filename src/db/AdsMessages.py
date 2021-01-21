@@ -4,6 +4,7 @@ from configuration import update_live_prefix
 from discord import NotFound
 from datetime import datetime
 import re
+from bot_utils import bot_fetch
 
 class AdsMessages(Base):
     __tablename__ = 'ads_messages'
@@ -37,35 +38,29 @@ class AdsMessages(Base):
         try:
             return self.discord_author
         except AttributeError:
-            if bot is None:
-                return None
-            self.discord_author = await bot.fetch_user(self.author_id)
+            self.discord_author = await bot_fetch(bot.fetch_user, self.author_id)
             return self.discord_author
 
     async def discord_channel(self, bot):
         try:
             return self.discord_channel
         except AttributeError:
-            if bot is None:
-                return None
-            self.discord_channel = await bot.fetch_channel(self.id)
+            self.discord_channel = await bot_fetch(bot.fetch_channel, self.id)
             return self.discord_channel
 
     async def discord_server(self, bot):
         try:
             return self.discord_server
         except AttributeError:
-            if bot is None:
-                return None
-            self.discord_server = await bot.fetch_guild(self.guild_id)
+            self.discord_server = await bot_fetch(bot.fetch_guild, self.guild_id)
             return self.discord_server
 
     async def discord_invite(self, bot):
         try:
-            self.invite = await bot.fetch_invite(code)
-        except NotFound:
-            return None
-
+            return self.invite
+        except AttributeError:
+            self.invite = await bot_fetch(bot.fetch_invite, self.invite_code)
+            return self.invite
 
 
     async def invite_from_discord_message(message):
