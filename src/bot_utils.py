@@ -10,12 +10,18 @@ from functools import wraps
 Core utlities
 """
 
-def load_extension_directory(bot, ext):
-    cmd_path = os.path.join(os.getcwd(), ext)
-    for f in os.listdir(cmd_path):
-        if f == '__init__.py' or not f.endswith('.py'):
-            continue
-        bot.load_extension('{}.{}'.format(ext, Path(f).stem))
+def load_extension_directory(bot, *ext):
+    cwd = os.getcwd()
+    ext_path = os.path.join(cwd, *ext)
+    for root, dirs, files in os.walk(ext_path):
+        for f in files:
+            path = os.path.join(root, f)
+            if not os.path.isfile(path) or not f.endswith('.py') or f.startswith('.') or f.startswith('_'):
+                continue
+            rel = os.path.splitext(os.path.relpath(path, cwd))[0]
+            extension = rel.replace(os.sep, '.')
+            bot.load_extension(extension)
+
 
 def load_prefixes():
     global PREFIXES
