@@ -21,6 +21,7 @@ services:
       MYSQL_DATABASE: rrbot
       MYSQL_USER: rrbot
       MYSQL_PASSWORD: rrbot
+      TZ: UTC
 
   mqtt:
     image: eclipse-mosquitto

@@ -3,6 +3,10 @@ from configuration import DB_URL, LOG_LEVEL, PREFIXES
 from sqlalchemy import create_engine, sql
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from zoneinfo import ZoneInfo
+
+# Need this because SQLAlchemy is dumb about timezones
+UTC_TZ = ZoneInfo('UTC')
 
 class BotDBError(Exception):
     pass

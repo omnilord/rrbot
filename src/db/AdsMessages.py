@@ -2,7 +2,7 @@ from sqlalchemy import Column, Boolean, BigInteger, Integer, String, DateTime, J
 from . import Base
 from configuration import update_live_prefix
 from discord import NotFound
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import re
 from bot_utils import bot_fetch
 
@@ -114,3 +114,19 @@ class AdsMessages(Base):
         elif instance.updated_at != fields['updated_at']:
             instance.amend(**fields)
         return instance
+
+
+    def most_recent_user_ad(db_session, ad):
+        return db_session.query(AdsMessages).filter(
+            AdsMessages.id!=ad.id,
+            AdsMessages.channel_id==ad.channel_id,
+            AdsMessages.author_id==ad.author_id
+        ).order_by(AdsMessages.created_at.desc()).first()
+
+
+    def most_recent_server_ad(db_session, ad):
+        return db_session.query(AdsMessages).filter(
+            AdsMessages.id!=ad.id,
+            AdsMessages.channel_id==ad.channel_id,
+            AdsMessages.invite_server_id==ad.invite_server_id
+        ).order_by(AdsMessages.created_at.desc()).first()

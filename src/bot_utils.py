@@ -5,6 +5,7 @@ from discord import NotFound, Forbidden, HTTPException, InvalidData
 from pathlib import Path
 from db import Session, bot_session, Servers, Channels, Users, Roles
 from functools import wraps
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 """
 Core utlities
@@ -131,3 +132,13 @@ async def notify_debug(bot, msg):
         logging.warning('Unable to send message to debug channel `{}`:\n{}'.format(DEBUG_CHANNEL, msg))
     else:
         await channel.send('I am alive!')
+
+def get_tz(tzone_name=None):
+    if tzone_name is None:
+        tzone_name = 'America/New_York'
+    try:
+        return ZoneInfo(tzone_name)
+    except ZoneInfoNotFoundError:
+        return ZoneInfo('America/New_York')
+
+
