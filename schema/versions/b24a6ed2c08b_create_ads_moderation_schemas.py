@@ -40,7 +40,7 @@ def upgrade():
         sa.Column('invite_count', sa.Integer, nullable=False, default=0),
         sa.Column('invite_code', sa.String(20), nullable=True, default=None),
         sa.Column('invite_server_id', sa.BigInteger, nullable=True, index=True),
-        sa.Column('invite_server_name', sa.String(255), nullable=True, default=None),
+        sa.Column('invite_server_name', sa.String(100), nullable=True, default=None),
         sa.Column('invite_expires_at', sa.DateTime, nullable=True, default=None)
     )
     op.create_table(

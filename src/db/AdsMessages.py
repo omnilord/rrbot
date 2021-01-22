@@ -27,7 +27,7 @@ class AdsMessages(Base):
     invite_count = Column(Integer, nullable=False, default=0)
     invite_code = Column(String(20), nullable=True, default=None)
     invite_server_id = Column(BigInteger, nullable=True, default=None)
-    invite_server_name = Column(String(255), nullable=True, default=None)
+    invite_server_name = Column(String(100), nullable=True, default=None)
     invite_expires_at = Column(DateTime, nullable=True, default=None)
 
     def delete(self, who_id=None):

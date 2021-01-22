@@ -4,13 +4,13 @@ from db import (
     Session,
     ensure_server
 )
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from discord import Webhook, AsyncWebhookAdapter
-import aiohttp, asyncio, logging
+import aiohttp, asyncio, logging, timeago
 
 
-OUTPUT_DATETIME_FORMAT = '%A, %D %T%p %Z'
+OUTPUT_DATETIME_FORMAT = '%A, %D at %T%p %Z'
 
 
 # These are temporary templates, planning to migrate to embeds at a later date.
@@ -18,7 +18,7 @@ OUTPUT_DATETIME_FORMAT = '%A, %D %T%p %Z'
 NO_INVITE_PROVIDED = "\nNO INVITE.\n"
 GOOD_INVITE_TEMPLATE = """
 server: `{ad.invite_server_name}`
-expires: `{expires_at}`
+expires: `{expires}`
 """
 BAD_INVITE_TEMPLATE = """
 server: `{ad.invite_server_name}`
@@ -26,7 +26,7 @@ server: `{ad.invite_server_name}`
 """
 EXPIRING_INVITE_TEMPLATE = """
 server: `{ad.invite_server_name}`
-_**expiring soon: `{expires_at}**_`
+**expiring soon**: `{expires}`
 """
 EXTRA_INVITES_TEMPLATE = 'There were {ad.invite_code} invites attached to this ad.'
 
@@ -45,7 +45,7 @@ EDITED_MESSAGE_TEMPLATED = """
 """
 DELETED_MESSAGE_TEMPLATE = """
 {ts}
-Channel: {channel_name} {(channel})
+Channel: {channel_name} ({channel})
 Author: {author}
 {invite}
 Message ID: {id}
@@ -67,6 +67,7 @@ def get_tz(tzone_name=None):
 
 
 def render_invite(ad, tz):
+
     # If ad.invite_code is invalid
     # render BAD_INVITE_TEMPLATE
     if ad.invite_count == 0:
@@ -76,9 +77,11 @@ def render_invite(ad, tz):
             good = True
             expires = 'No'
         else:
-            alart_at = ad.invite_expires_at - timedelta(days=1)
+            alert_at = ad.invite_expires_at - timedelta(days=1)
             good = alert_at <= datetime.today()
-            expires = ad.invite_expires_at.astimezone(tz).strftime(OUTPUT_DATETIME_FORMAT)
+            expires_exact = ad.invite_expires_at.astimezone(tz).strftime(OUTPUT_DATETIME_FORMAT)
+            expires_at = timeago.format(ad.invite_expires_at)
+            expires = f'{expires_at} on {expires_exact}'
 
         if not good:
             return EXPIRING_INVITE_TEMPLATE.format(ad=ad, expires=expires)
