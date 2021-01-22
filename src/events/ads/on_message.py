@@ -17,7 +17,7 @@ def setup(bot):
             return
 
         db_session = Session()
-        channel = db_session.query(AdsChannels).filter_by(id = message.channel.id).one_or_none()
+        channel = AdsChannels.one_channel(db_session, message.channel.id)
 
         if channel is not None:
             ad = await AdsMessages.from_discord_message(db_session, bot, message)

@@ -2,6 +2,7 @@ from sqlalchemy import Column, Boolean, BigInteger, String, DateTime, JSON
 from . import Base
 from datetime import datetime
 
+
 class AdsChannels(Base):
     __tablename__ = 'ads_channels'
     id = Column(BigInteger, primary_key = True, autoincrement=False)
@@ -34,8 +35,5 @@ class AdsChannels(Base):
             self.discord_channel = bot.get_channel(self.id)
             return self.discord_channel
 
-
-
-def is_active_ads_channel(session, channel):
-    # TODO: query for WHERE id=channel.id AND active=True
-    pass
+    def one_channel(db_session, channel_id):
+        return db_session.query(AdsChannels).get(channel_id)

@@ -108,7 +108,7 @@ class AdsMessages(Base):
 
     async def from_discord_message(db_session, bot, message):
         fields = await AdsMessages.fields_from_discord_message(bot, message)
-        instance = db_session.query(AdsMessages).filter_by(id=message.id).one_or_none()
+        instance = AdsMessages.one_message(db_session, message.id)
         if not instance:
             instance = AdsMessages(**fields)
         elif instance.updated_at != fields['updated_at']:
@@ -130,3 +130,7 @@ class AdsMessages(Base):
             AdsMessages.channel_id==ad.channel_id,
             AdsMessages.invite_server_id==ad.invite_server_id
         ).order_by(AdsMessages.created_at.desc()).first()
+
+
+    def one_message(db_session, message_id):
+        return db_session.query(AdsMessages).get(message_id)

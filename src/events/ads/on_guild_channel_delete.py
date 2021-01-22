@@ -15,7 +15,7 @@ def setup(bot):
     @bot.listen()
     async def on_guild_channel_delete(discord_channel):
         db_session = Session()
-        channel = db_session.query(AdsChannels).filter_by(id=discord_channel.id).one_or_none()
+        channel = AdsChannels.one_channel(db_session, discord_channel.id)
 
         if channel is not None:
             ads = db_session.query(AdsMessages).filter_by(channel_id=channel.id, deleted_at=None)
