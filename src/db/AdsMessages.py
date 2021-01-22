@@ -62,6 +62,13 @@ class AdsMessages(Base):
             self.invite = await bot_fetch(bot.fetch_invite, self.invite_code)
             return self.invite
 
+    def amend(self, **fields):
+        updates = 0
+        for key, value in kwargs.items():
+            if hasattr(self, key) and getattr(self, key) != value:
+                updates += 1
+                setattr(self, key, value)
+
 
     async def invite_from_discord_message(message):
         regexp = re.compile('https?://(?:discord.gg|(?:discord|discordapp).com/invite)/(?P<code>\w+)')
@@ -91,7 +98,7 @@ class AdsMessages(Base):
     async def fields_from_discord_message(message):
         invite_data = await AdsMessages.invite_from_discord_message(message)
         return {
-            id: message.id,
+            'id': message.id,
             'server_id': message.guild.id,
             'channel_id': message.channel.id,
             'author_id': message.author.id,
@@ -101,19 +108,11 @@ class AdsMessages(Base):
         }
 
 
-    async def from_discord_message(session, message):
+    async def from_discord_message(db_session, message):
         fields = await AdsMessages.fields_from_discord_message(message)
-        instance = session.query(AdsMessages).filter_by(id=message.id).first()
+        instance = db_session.query(AdsMessages).filter_by(id=message.id).one_or_none()
         if not instance:
-            instance = AdsMessages(fields)
+            instance = AdsMessages(**fields)
         elif instance.updated_at != fields['updated_at']:
-            instance.amend(fields)
+            instance.amend(**fields)
         return instance
-
-
-    def amend(self, fields):
-        updates = 0
-        for key, value in kwargs.items():
-            if hasattr(self, key) and getattr(self, key) != value:
-                updates += 1
-                setattr(self, key, value)

@@ -34,7 +34,7 @@ EXTRA_INVITES_TEMPLATE = 'There were {ad.invite_code} invites attached to this a
 # MESSAGE TEMPLATES
 NEW_MESSAGE_TEMPLATE = """
 {ts}
-Channel: {channel_name} {(channel})
+Channel: {channel_name} ({channel})
 Author: {author}
 {invite}
 {timers}
@@ -91,11 +91,11 @@ def render_invite(ad, tz):
         return EXTRA_INVITES_TEMPLATE.format(ad=ad)
 
 
-def render_timer():
+def render_timers(ad, tz):
     return '<todo: in specific ads channel, last post for server, last post by this user>'
 
 
-def render_ad_notice(ad, message, channel, tzone_name=None):
+def render_new_ad(ad, message, channel, tzone_name=None):
     tz = get_tz(tzone_name)
     return NEW_MESSAGE_TEMPLATE.format(
         ts=datetime.now(tz).strftime(OUTPUT_DATETIME_FORMAT),
@@ -168,8 +168,8 @@ def setup(bot):
         if channel is not None:
             ad = await AdsMessages.from_discord_message(db_session, message)
             server = ensure_server(db_session, message.guild.id)
-            #notice = render_ad_notice(ad, message, channel, server.timezone)
-            #await send_notify(notice, channel, db_session, 'New Ad')
+            notice = render_new_ad(ad, message, channel, server.timezone)
+            await send_notify(notice, channel, db_session, 'New Ad')
 
         db_session.close()
 
