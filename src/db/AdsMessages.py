@@ -2,7 +2,7 @@ from sqlalchemy import Column, Boolean, BigInteger, Integer, String, DateTime, J
 from . import Base
 from configuration import update_live_prefix
 from discord import NotFound
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 from bot_utils import bot_fetch
 
@@ -70,7 +70,7 @@ class AdsMessages(Base):
                 setattr(self, key, value)
 
 
-    async def invite_from_discord_message(message):
+    async def invite_from_discord_message(bot, message):
         regexp = re.compile('https?://(?:discord.gg|(?:discord|discordapp).com/invite)/(?P<code>\w+)')
         invites = re.findall(regexp, message.content)
         data = {
@@ -81,22 +81,20 @@ class AdsMessages(Base):
             'invite_expires_at': None
         }
         if len(invites) == 1:
-            try:
-                code = invites[0]('code')
-                invite = await message.bot.fetch_invite(code)
-                dt = None if invite.max_age == 0 else datetime.now() + invite.max_age
+            code = invites[0]
+            invite = await bot_fetch(bot.fetch_invite, code)
+            if invite is not None:
                 data['invite_code'] = invite.id
                 data['invite_server_id'] = invite.guild.id
                 data['invite_server_name'] = invite.guild.name
-                data['invite_expires_at'] = dt
-            except NotFound:
-                data['invite_count'] = 0
-                pass
+                if invite.max_age is not None and invite.max_age > 0:
+                    delta = timedelta(seconds=invite.max_age)
+                    data['invite_expires_at'] = datetime.now() + delta
         return data
 
 
-    async def fields_from_discord_message(message):
-        invite_data = await AdsMessages.invite_from_discord_message(message)
+    async def fields_from_discord_message(bot, message):
+        invite_data = await AdsMessages.invite_from_discord_message(bot, message)
         return {
             'id': message.id,
             'server_id': message.guild.id,
@@ -108,8 +106,8 @@ class AdsMessages(Base):
         }
 
 
-    async def from_discord_message(db_session, message):
-        fields = await AdsMessages.fields_from_discord_message(message)
+    async def from_discord_message(db_session, bot, message):
+        fields = await AdsMessages.fields_from_discord_message(bot, message)
         instance = db_session.query(AdsMessages).filter_by(id=message.id).one_or_none()
         if not instance:
             instance = AdsMessages(**fields)

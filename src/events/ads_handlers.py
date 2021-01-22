@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from discord import Webhook, AsyncWebhookAdapter
 import aiohttp, asyncio, logging, timeago
+from bot_utils import bot_fetch
 
 
 OUTPUT_DATETIME_FORMAT = '%A, %D at %T%p %Z'
@@ -15,18 +16,14 @@ OUTPUT_DATETIME_FORMAT = '%A, %D at %T%p %Z'
 
 # These are temporary templates, planning to migrate to embeds at a later date.
 #INVITE TEMPLATES
-NO_INVITE_PROVIDED = "\nNO INVITE.\n"
+NO_INVITE_PROVIDED = "\nNO INVITE PROVIDED.\n"
 GOOD_INVITE_TEMPLATE = """
 server: `{ad.invite_server_name}`
-expires: `{expires}`
+invite: {invite.url}
 """
 BAD_INVITE_TEMPLATE = """
 server: `{ad.invite_server_name}`
 **INVITE HAS EXPIRED**
-"""
-EXPIRING_INVITE_TEMPLATE = """
-server: `{ad.invite_server_name}`
-**expiring soon**: `{expires}`
 """
 EXTRA_INVITES_TEMPLATE = 'There were {ad.invite_code} invites attached to this ad.'
 
@@ -38,7 +35,8 @@ Channel: {channel_name} ({channel})
 Author: {author}
 {invite}
 {timers}
-Message: {url}
+Message ID: {id}
+{url}
 """
 EDITED_MESSAGE_TEMPLATED = """
 <todo>
@@ -66,55 +64,44 @@ def get_tz(tzone_name=None):
         return ZoneInfo('America/New_York')
 
 
-def render_invite(ad, tz):
-
-    # If ad.invite_code is invalid
-    # render BAD_INVITE_TEMPLATE
+async def render_invite(bot, ad, tz):
     if ad.invite_count == 0:
         return NO_INVITE_PROVIDED
     elif ad.invite_count == 1:
-        if ad.invite_expires_at is None:
-            good = True
-            expires = 'No'
-        else:
-            alert_at = ad.invite_expires_at - timedelta(days=1)
-            good = alert_at <= datetime.today()
-            expires_exact = ad.invite_expires_at.astimezone(tz).strftime(OUTPUT_DATETIME_FORMAT)
-            expires_at = timeago.format(ad.invite_expires_at)
-            expires = f'{expires_at} on {expires_exact}'
-
-        if not good:
-            return EXPIRING_INVITE_TEMPLATE.format(ad=ad, expires=expires)
-        else:
-            return GOOD_INVITE_TEMPLATE.format(ad=ad, expires=expires)
-    else:
-        return EXTRA_INVITES_TEMPLATE.format(ad=ad)
+        invite = await bot_fetch(bot.fetch_invite, ad.invite_code)
+        if invite is None:
+            return BAD_INVITE_TEMPLATE.format(ad=ad)
+        return GOOD_INVITE_TEMPLATE.format(ad=ad, invite=invite)
+    return EXTRA_INVITES_TEMPLATE.format(ad=ad)
 
 
 def render_timers(ad, tz):
     return '<todo: in specific ads channel, last post for server, last post by this user>'
 
 
-def render_new_ad(ad, message, channel, tzone_name=None):
+async def render_new_ad(bot, ad, message, channel, tzone_name=None):
     tz = get_tz(tzone_name)
+    invite = await render_invite(bot, ad, tz)
     return NEW_MESSAGE_TEMPLATE.format(
         ts=datetime.now(tz).strftime(OUTPUT_DATETIME_FORMAT),
         channel_name=channel.name,
         author=message.author.mention,
         channel=message.channel.mention,
-        invite=render_invite(ad, tz),
+        invite=invite,
         timers=render_timers(ad, tz),
+        id=ad.id,
         url=message.jump_url
     )
 
-def render_ad_deleted(ad, channel, bot, tzone_name=None):
+async def render_ad_deleted(bot, ad, channel, tzone_name=None):
     tz = get_tz(tzone_name)
+    invite = await render_invite(bot, ad, tz)
     return DELETED_MESSAGE_TEMPLATE.format(
         ts=ad.deleted_at.astimezone(tz).strftime(OUTPUT_DATETIME_FORMAT),
         channel_name=channel.name,
         author=f"<@{ad.author_id}> (id: {ad.author_id})",
         channel=f"<#{channel.id}>",
-        invite=render_invite(ad, tz),
+        invite=invite,
         id=ad.id
     )
 
@@ -166,11 +153,11 @@ def setup(bot):
         channel = db_session.query(AdsChannels).filter_by(id = message.channel.id).one_or_none()
 
         if channel is not None:
-            ad = await AdsMessages.from_discord_message(db_session, message)
+            ad = await AdsMessages.from_discord_message(db_session, bot, message)
             db_session.add(ad)
             db_session.commit()
             server = ensure_server(db_session, message.guild.id)
-            notice = render_new_ad(ad, message, channel, server.timezone)
+            notice = await render_new_ad(bot, ad, message, channel, server.timezone)
             await send_notify(notice, channel, db_session, 'New Ad')
 
         db_session.close()
@@ -202,7 +189,7 @@ def setup(bot):
             ad.delete()
             db_session.commit()
             server = ensure_server(db_session, payload.guild_id)
-            notice = render_ad_deleted(ad, channel, bot, server.timezone)
+            notice = await render_ad_deleted(bot, ad, channel, server.timezone)
             await send_notify(notice, channel, db_session, 'Ad Deleted')
 
         db_session.close()
