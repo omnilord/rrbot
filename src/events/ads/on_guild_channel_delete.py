@@ -6,7 +6,7 @@ from db import (
     Session,
     ensure_server
 )
-from . import render_channel_deleted, send_notify
+from . import render_channel_deleted, notify_ad_webhook
 
 
 def setup(bot):
@@ -25,6 +25,6 @@ def setup(bot):
             db_session.commit()
             server = ensure_server(db_session, message.guild.id)
             #notice = render_channel_deleted(channel, ads_count, server.timezone)
-            #await send_notify(notice, channel, db_session, 'Channel Deleted')
+            #await notify_ad_webhook(notice, channel, db_session, 'Channel Deleted')
 
         db_session.close()

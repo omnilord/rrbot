@@ -6,7 +6,7 @@ from db import (
     Session,
     ensure_server
 )
-from . import render_ad_deleted, send_notify
+from . import render_ad_deleted, notify_ad_webhook
 
 
 def setup(bot):
@@ -23,6 +23,6 @@ def setup(bot):
             db_session.commit()
             server = ensure_server(db_session, payload.guild_id)
             notice = await render_ad_deleted(bot, ad, channel, server.timezone)
-            await send_notify(notice, channel, db_session, 'Ad Deleted')
+            await notify_ad_webhook(notice, channel, db_session, 'Ad Deleted')
 
         db_session.close()

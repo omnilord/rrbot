@@ -1,16 +1,35 @@
-import logging
+import logging, task_scheduler as tasker
+from db import (
+    UTC_TZ,
+    AdsMessages,
+    AdsChannels,
+    Session,
+    ensure_server
+)
+from . import render_ad_edited, notify_ad_webhook, diff_message
+from bot_utils import bot_fetch
 
 
 def setup(bot):
     logging.info('Loading `on_raw_message_edit` listener for ads handler')
 
     @bot.listen()
-    async def on_raw_message_edit(message):
-        if message.author.id == bot.user.id:
-            return
+    async def on_raw_message_edit(payload):
+        db_session = Session()
+        ad = AdsMessages.one_message(db_session, payload.message_id)
+        channel = AdsChannels.one_channel(db_session, payload.channel_id)
 
-        # TODO: call ads_messages.edit(message) if message.channel in ads.channels
-        #    this call _really_ needs to debounce on send_notify such that only
-        #    one notification is set to control every 2 or 3 minutes if someone is
-        #    repeatedly editing an ad message.
-        pass
+        if channel is not None and ad is not None:
+            d_channel = await bot_fetch(bot.fetch_channel, payload.channel_id)
+            message = payload.cached_message if payload.cached_message is not None else await bot_fetch(d_channel.fetch_message, payload.message_id)
+            diffs = await diff_message(bot, ad, message, db_session)
+
+            if diffs:
+                ad.amend(**diffs)
+                db_session.commit()
+                server = ensure_server(db_session, channel.server_id)
+                notice = await render_ad_edited(bot, db_session, ad, message, channel, diffs, server.timezone)
+                key = f'edit_message_{ad.id}'
+                tasker.register(notify_ad_webhook, notice, channel, db_session, 'Ad Edited', key=key, delay=30)
+
+        db_session.close()

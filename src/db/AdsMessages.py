@@ -64,10 +64,11 @@ class AdsMessages(Base):
 
     def amend(self, **fields):
         updates = 0
-        for key, value in kwargs.items():
-            if hasattr(self, key) and getattr(self, key) != value:
+        for k, v in fields.items():
+            if hasattr(self, k) and getattr(self, k) != v:
                 updates += 1
-                setattr(self, key, value)
+                setattr(self, k, v)
+        return updates
 
 
     async def invite_from_discord_message(bot, message):
@@ -106,8 +107,9 @@ class AdsMessages(Base):
         }
 
 
-    async def from_discord_message(db_session, bot, message):
-        fields = await AdsMessages.fields_from_discord_message(bot, message)
+    async def from_discord_message(db_session, bot, message, fields=None):
+        if fields is None:
+            fields = await AdsMessages.fields_from_discord_message(bot, message)
         instance = AdsMessages.one_message(db_session, message.id)
         if not instance:
             instance = AdsMessages(**fields)

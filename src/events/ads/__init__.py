@@ -39,7 +39,7 @@ Author: {author}
 Message ID: {id}
 {url}
 """
-EDITED_MESSAGE_TEMPLATED = """
+EDITED_MESSAGE_TEMPLATE = """
 <todo>
 """
 DELETED_MESSAGE_TEMPLATE = """
@@ -83,9 +83,6 @@ def render_timers(db_session, ad, tz):
     if past_user is None:
         user_str = None
     else:
-        #created_at = past_user.created_at.replace(tzinfo=UTC_TZ)
-        #ta = timeago.format(created_at, datetime.utcnow().replace(tzinfo=UTC_TZ))
-        #ts = created_at.astimezone(tz).strftime(OUTPUT_DATETIME_FORMAT)
         ta, ts = time_labels_from_utc(past_user.created_at, tz)
         if past_user.invite_server_name is None:
             server_name = '_unknown_'
@@ -99,9 +96,6 @@ def render_timers(db_session, ad, tz):
     if past_server is None:
         server_str = None
     elif past_server != past_user:
-        #created_at = past_server.created_at.replace(tzinfo=UTC_TZ)
-        #ta = timeago.format(created_at, datetime.utcnow().replace(tzinfo=UTC_TZ))
-        #ts = created_at.astimezone(tz).strftime(OUTPUT_DATETIME_FORMAT)
         ta, ts = time_labels_from_utc(past_server.created_at, tz)
         output.append(SERVER_LAST_POST.format(ta=ta, ts=ts, u=past_server.author_id))
 
@@ -113,6 +107,22 @@ async def render_new_ad(bot, db_session, ad, message, channel, tzone_name=None):
     invite = await render_invite(bot, ad, tz)
     timers = render_timers(db_session, ad, tz)
     return NEW_MESSAGE_TEMPLATE.format(
+        ts=datetime.now(tz).strftime(OUTPUT_DATETIME_FORMAT),
+        channel_name=channel.name,
+        author=message.author.mention,
+        channel=message.channel.mention,
+        invite=invite,
+        timers=(timers+'\n' if timers else ''),
+        id=ad.id,
+        url=message.jump_url
+    )
+
+
+async def render_ad_edited(bot, db_session, ad, message, channel, diffs, tzone_name=None):
+    tz = get_tz(tzone_name)
+    invite = await render_invite(bot, ad, tz)
+    timers = render_timers(db_session, ad, tz)
+    return EDITED_MESSAGE_TEMPLATE.format(
         ts=datetime.now(tz).strftime(OUTPUT_DATETIME_FORMAT),
         channel_name=channel.name,
         author=message.author.mention,
@@ -141,7 +151,7 @@ def render_channel_deleted(channel, count, tzone_name=None):
     return DELETED_CHANNEL_TEMPLATE.format(name=channel.name, count=count)
 
 
-async def send_notify(msg, channel, db_session, username='RR Bot'):
+async def notify_ad_webhook(msg, channel, db_session, username='RR Bot'):
     """
     Call the webhook associated with the channel to create a
     notification message.
@@ -157,3 +167,16 @@ async def send_notify(msg, channel, db_session, username='RR Bot'):
         except (NotFound, Forbidden):
             channel.webhook_url = None
             db_session.commit()
+
+
+async def diff_message(bot, ad, message, db_session):
+    """
+    parse the message content and diff the new parsed data
+    with the stored data from the last incarnation of this
+    ad.
+    """
+    if message is None:
+        return None
+
+    new_fields = await AdsMessages.fields_from_discord_message(bot, message)
+    return dict([(k,v) for k,v in new_fields.items() if v != getattr(ad, k)])

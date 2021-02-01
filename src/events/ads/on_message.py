@@ -5,7 +5,7 @@ from db import (
     Session,
     ensure_server
 )
-from . import render_new_ad, send_notify
+from . import render_new_ad, notify_ad_webhook
 
 
 def setup(bot):
@@ -25,6 +25,6 @@ def setup(bot):
             db_session.commit()
             server = ensure_server(db_session, message.guild.id)
             notice = await render_new_ad(bot, db_session, ad, message, channel, server.timezone)
-            await send_notify(notice, channel, db_session, 'New Ad')
+            await notify_ad_webhook(notice, channel, db_session, 'New Ad')
 
         db_session.close()
