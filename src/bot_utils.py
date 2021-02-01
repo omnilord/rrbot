@@ -11,6 +11,9 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 Core utlities
 """
 
+class RRBotException(Exception):
+    pass
+
 def load_extension_directory(bot, *ext):
     cwd = os.getcwd()
     ext_path = os.path.join(cwd, *ext)

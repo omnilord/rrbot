@@ -57,4 +57,7 @@ for f in glob.glob(path.join(path.dirname(__file__), "*.py")):
     if path.isfile(f) and not f.endswith('__init__.py'):
         __import__(f"mqtt_client.{path.basename(f)[:-3]}")
 
-asyncio.ensure_future(mqtt_task())
+__running = asyncio.ensure_future(mqtt_task())
+
+def shutdown():
+    __running.cancel()

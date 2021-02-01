@@ -34,6 +34,8 @@ intents = Intents.default()
 intents.members = True
 bot = commands.Bot(command_prefix=prefix_operator, intents=intents)
 
+import task_scheduler as tasker
+
 
 # load the extensions
 
@@ -51,3 +53,7 @@ if '-c' in sys.argv:
     code.interact(local=dict(globals(), **locals()))
 else:
     bot.run(TOKEN)
+
+logging.info('Shutting down')
+mqtt_client.shutdown()
+tasker.shutdown()
