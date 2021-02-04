@@ -6,6 +6,8 @@ from datetime import datetime, timedelta, timezone
 import re
 from bot_utils import bot_fetch
 
+AGE_GATE_REGEXP = re.compile(r'(\d{2})\+')
+
 class AdsMessages(Base):
     __tablename__ = 'ads_messages'
     id = Column(BigInteger, primary_key = True, autoincrement=False)
@@ -29,6 +31,18 @@ class AdsMessages(Base):
     invite_server_id = Column(BigInteger, nullable=True, default=None)
     invite_server_name = Column(String(100), nullable=True, default=None)
     invite_expires_at = Column(DateTime, nullable=True, default=None)
+
+    # for RR, all ads should have 18+ age (adults only) constraint; store the age values found.
+    age_gate = Column(String(50), nullable=True)
+
+
+# INSTANCE METHODS
+
+    def has_valid_age_gate(self):
+        if self.age_gate is None:
+            return (False, None)
+        ages = [int(age) for age in AGE_GATE_REGEXP.findall(self.age_gate)]
+        return (len(ages) == 1 and ages[0] >= 18, ages)
 
     def delete(self, who_id=None):
         self.deleted_at = datetime.now()
@@ -71,6 +85,23 @@ class AdsMessages(Base):
         return updates
 
 
+# CLASS METHODS
+
+    def parse_age_gate(message):
+        """
+        A super naive method for determining if an ad has an
+        age flag or not.  This is not error-proof, nor exhaustive
+        but it should find most 18+ flags, or give feedback on
+        whether the ad contains proper age gate notices.
+        """
+
+        ages = AGE_GATE_REGEXP.findall(message)
+        if len(ages) == 0:
+            return None
+        else:
+            return '+, '.join(ages)+'+'
+
+
     async def invite_from_discord_message(bot, message):
         regexp = re.compile('https?://(?:discord.gg|(?:discord|discordapp).com/invite)/(?P<code>\w+)')
         invites = re.findall(regexp, message.content)
@@ -103,6 +134,7 @@ class AdsMessages(Base):
             'author_id': message.author.id,
             'created_at': message.created_at,
             'updated_at': message.edited_at,
+            'age_gate': AdsMessages.parse_age_gate(message.content),
             **invite_data
         }
 

@@ -16,6 +16,7 @@ def deregister(key, method='pop'):
     `key` - the identity of a task to remove from the queue.
     `method` - <internal use>
     """
+
     fn = getattr(tasks, method)
     task = fn(key, None)
     if task is not None and not task.cancelled():

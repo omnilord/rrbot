@@ -11,8 +11,8 @@ class AdsWarnings(Base):
     # basic metadata about known times of this warning
     created_at = Column(DateTime, nullable=False)
     created_by_id = Column(BigInteger, nullable=False)
-    deleted_at = Column(DateTime, nullable=True, default=None)
-    deleted_by_id = Column(BigInteger, nullable=True, default=None)
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by_id = Column(BigInteger, nullable=True)
 
     # additional ad-hoc data about the warning, including:
     # { "notes": [ { "user_id": #, "created_at": "", "note": "" } ] }

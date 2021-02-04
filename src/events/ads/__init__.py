@@ -34,6 +34,7 @@ NEW_MESSAGE_TEMPLATE = """
 {ts}
 Channel: {channel_name} ({channel})
 Author: {author}
+Age Gate: {age_gate}
 {invite}
 {timers}
 Message ID: {id}
@@ -85,7 +86,7 @@ def render_timers(db_session, ad, tz):
     else:
         ta, ts = time_labels_from_utc(past_user.created_at, tz)
         if past_user.invite_server_name is None:
-            server_name = '_unknown_'
+            server_name = '_unknown server_'
         else:
             server_name = past_user.invite_server_name
         output.append(USER_LAST_POST.format(ta=ta, ts=ts, s=server_name))
@@ -102,15 +103,28 @@ def render_timers(db_session, ad, tz):
     return '\n'.join(output).strip()
 
 
+def render_age_gate(ad):
+    valid, ages = ad.has_valid_age_gate()
+    if ages is None:
+        return '**No Age Gate ("18+" or similar) Found**'
+
+    if valid:
+        return ad.age_gate
+
+    return f'Multiple potential age gates found: {ad.age_gate}'
+
+
 async def render_new_ad(bot, db_session, ad, message, channel, tzone_name=None):
     tz = get_tz(tzone_name)
     invite = await render_invite(bot, ad, tz)
     timers = render_timers(db_session, ad, tz)
+    age_gate = render_age_gate(ad)
     return NEW_MESSAGE_TEMPLATE.format(
         ts=datetime.now(tz).strftime(OUTPUT_DATETIME_FORMAT),
         channel_name=channel.name,
         author=message.author.mention,
         channel=message.channel.mention,
+        age_gate=age_gate,
         invite=invite,
         timers=(timers+'\n' if timers else ''),
         id=ad.id,
@@ -122,11 +136,13 @@ async def render_ad_edited(bot, db_session, ad, message, channel, diffs, tzone_n
     tz = get_tz(tzone_name)
     invite = await render_invite(bot, ad, tz)
     timers = render_timers(db_session, ad, tz)
+    age_gate = render_age_gate(ad)
     return EDITED_MESSAGE_TEMPLATE.format(
         ts=datetime.now(tz).strftime(OUTPUT_DATETIME_FORMAT),
         channel_name=channel.name,
         author=message.author.mention,
         channel=message.channel.mention,
+        age_gate=age_gate,
         invite=invite,
         timers=(timers+'\n' if timers else ''),
         id=ad.id,

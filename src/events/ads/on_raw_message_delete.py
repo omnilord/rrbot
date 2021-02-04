@@ -1,4 +1,4 @@
-import logging
+import logging, task_scheduler as tasker
 from db import (
     UTC_TZ,
     AdsMessages,
@@ -23,6 +23,7 @@ def setup(bot):
             db_session.commit()
             server = ensure_server(db_session, payload.guild_id)
             notice = await render_ad_deleted(bot, ad, channel, server.timezone)
+            tasker.deregister(f'edit_message_{ad.id}')
             await notify_ad_webhook(notice, channel, db_session, 'Ad Deleted')
 
         db_session.close()

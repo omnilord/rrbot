@@ -21,31 +21,31 @@ def upgrade():
         'channels',
         sa.Column('id', sa.BigInteger, primary_key=True, autoincrement=False),
         sa.Column('prefix', sa.String(10), nullable=True),
-        sa.Column('muted', sa.Boolean, nullable=False, default=False),
-        sa.Column('voiced', sa.Boolean, nullable=False, default=False),
+        sa.Column('muted', sa.Boolean, nullable=False, server_default='0'),
+        sa.Column('voiced', sa.Boolean, nullable=False, server_default='0'),
         sa.Column('jsondata', sa.JSON)
     )
     op.create_table(
         'roles',
         sa.Column('id', sa.BigInteger, primary_key=True, autoincrement=False),
-        sa.Column('muted', sa.Boolean, nullable=False, default=False),
-        sa.Column('voiced', sa.Boolean, nullable=False, default=False),
-        sa.Column('moderator', sa.Boolean, nullable=False, default=False),
+        sa.Column('muted', sa.Boolean, nullable=False, server_default='0'),
+        sa.Column('voiced', sa.Boolean, nullable=False, server_default='0'),
+        sa.Column('moderator', sa.Boolean, nullable=False, server_default='0'),
         sa.Column('jsondata', sa.JSON)
     )
     op.create_table(
         'servers',
         sa.Column('id', sa.BigInteger, primary_key=True, autoincrement=False),
         sa.Column('prefix', sa.String(10), nullable=True),
-        sa.Column('muted', sa.Boolean, nullable=False, default=False),
+        sa.Column('muted', sa.Boolean, nullable=False, server_default='0'),
         sa.Column('jsondata', sa.JSON)
     )
     op.create_table(
         'users',
         sa.Column('id', sa.BigInteger, primary_key=True, autoincrement=False),
-        sa.Column('muted', sa.Boolean, nullable=False, default=False),
-        sa.Column('voiced', sa.Boolean, nullable=False, default=False),
-        sa.Column('moderator', sa.Boolean, nullable=False, default=False),
+        sa.Column('muted', sa.Boolean, nullable=False, server_default='0'),
+        sa.Column('voiced', sa.Boolean, nullable=False, server_default='0'),
+        sa.Column('moderator', sa.Boolean, nullable=False, server_default='0'),
         sa.Column('jsondata', sa.JSON)
     )
     op.create_table(
@@ -55,9 +55,9 @@ def upgrade():
         sa.Column('user_id', sa.BigInteger, nullable=False, index=True),
         sa.Column('server_id', sa.BigInteger, nullable=False, index=True),
         sa.Column('channel_id', sa.BigInteger, nullable=True, index=True),
-        sa.Column('context', sa.Text, default=''),
-        sa.Column('kicked', sa.Boolean, nullable=False, default=False),
-        sa.Column('banned', sa.Boolean, nullable=False, default=False)
+        sa.Column('context', sa.Text),
+        sa.Column('kicked', sa.Boolean, nullable=False, server_default='0'),
+        sa.Column('banned', sa.Boolean, nullable=False, server_default='0')
     )
 
 
