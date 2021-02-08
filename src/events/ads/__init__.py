@@ -10,6 +10,13 @@ from bot_utils import get_tz, bot_fetch
 
 
 OUTPUT_DATETIME_FORMAT = '%A, %D at %T%p %Z'
+NOTIFY_ON_EDIT = (
+    'age_gate',
+    'invite_code',
+    'invite_count',
+    'invite_server_id',
+    'invite_server_name'
+)
 
 
 # These are temporary templates, planning to migrate to embeds at a later date.
@@ -41,7 +48,14 @@ Message ID: {id}
 {url}
 """
 EDITED_MESSAGE_TEMPLATE = """
-<todo>
+{ts}
+Channel: {channel_name} ({channel})
+Author: {author}
+Age Gate: {age_gate}{ag_edited}
+{invite}{invite_edited}
+{timers}
+Message ID: {id}
+{url}
 """
 DELETED_MESSAGE_TEMPLATE = """
 {ts}
@@ -137,13 +151,20 @@ async def render_ad_edited(bot, db_session, ad, message, channel, diffs, tzone_n
     invite = await render_invite(bot, ad, tz)
     timers = render_timers(db_session, ad, tz)
     age_gate = render_age_gate(ad)
+
+    dkeys = diffs.keys()
+    ag_edited = ' **EDITED**' if 'age_gate' in dkeys else ''
+    invite_flag = any(k.startswith('invite_') for k in dkeys)
+    invite_edited = ' **EDITED**' if invite_flag else ''
     return EDITED_MESSAGE_TEMPLATE.format(
         ts=datetime.now(tz).strftime(OUTPUT_DATETIME_FORMAT),
         channel_name=channel.name,
         author=message.author.mention,
         channel=message.channel.mention,
         age_gate=age_gate,
+        ag_edited=ag_edited,
         invite=invite,
+        invite_edited=invite_edited,
         timers=(timers+'\n' if timers else ''),
         id=ad.id,
         url=message.jump_url
@@ -172,6 +193,7 @@ async def notify_ad_webhook(msg, channel, db_session, username='RR Bot'):
     Call the webhook associated with the channel to create a
     notification message.
     """
+
     if channel is None or channel.webhook_url is None:
         return
 
@@ -185,14 +207,22 @@ async def notify_ad_webhook(msg, channel, db_session, username='RR Bot'):
             db_session.commit()
 
 
+def valid_change(ad, k, v):
+    return k in NOTIFY_ON_EDIT and  v != getattr(ad, k)
+
+
 async def diff_message(bot, ad, message, db_session):
     """
     parse the message content and diff the new parsed data
     with the stored data from the last incarnation of this
     ad.
+
+    returns:
+    tuple(key, old value, new value)
     """
+
     if message is None:
         return None
 
     new_fields = await AdsMessages.fields_from_discord_message(bot, message)
-    return dict([(k,v) for k,v in new_fields.items() if v != getattr(ad, k)])
+    return dict([(k,(getattr(ad, k),v)) for k,v in new_fields.items() if valid_change(ad, k, v)])

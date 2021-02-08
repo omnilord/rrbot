@@ -25,7 +25,7 @@ def setup(bot):
             diffs = await diff_message(bot, ad, message, db_session)
 
             if diffs:
-                ad.amend(**diffs)
+                ad.amend(**dict([(k,v[1]) for k,v in diffs.items()]))
                 db_session.commit()
                 server = ensure_server(db_session, channel.server_id)
                 notice = await render_ad_edited(bot, db_session, ad, message, channel, diffs, server.timezone)

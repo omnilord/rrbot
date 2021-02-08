@@ -34,6 +34,7 @@ async def coroutine_runner(task, key, delay, *args):
     logging.info(f'Completing task for key={key}')
     return
 
+
 def runner(task, key, *args):
     """
     internal execution of the task and cleanup
@@ -43,6 +44,7 @@ def runner(task, key, *args):
     task(*args)
     deregister(key)
     return
+
 
 def register(callback, *args, key=None, delay=DEFAULT_TASK_DELAY):
     """
@@ -71,10 +73,11 @@ def register(callback, *args, key=None, delay=DEFAULT_TASK_DELAY):
         task = coroutine_runner(callback, key, delay, *args)
         tasks[key] = asyncio.ensure_future(task)
     else:
-        logging.info(f'registering call later task for key={key}')
+        logging.info(f'registering call later for key={key}')
         loop = asyncio.get_running_loop()
         tasks[key] = loop.call_later(delay, runner, callback, key, *args)
     return key
+
 
 def shutdown():
     """
