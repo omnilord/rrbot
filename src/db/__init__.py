@@ -75,11 +75,11 @@ def get_or_create(session, model, **kwargs):
         session.commit()
     return instance
 
-def ensure_channel(session, id):
-    return get_or_create(session, Channels, id=id)
+def ensure_channel(session, id, server_id):
+    return get_or_create(session, Channels, id=id, server_id=server_id)
 
-def ensure_channels(session, ids):
-    return [(id, ensure_channel(session, id)) for id in ids]
+def ensure_channels(session, ids, server_id):
+    return [(id, ensure_channel(session, id, server_id)) for id in ids]
 
 def ensure_server(session, id):
     return get_or_create(session, Servers, id=id)
@@ -87,11 +87,11 @@ def ensure_server(session, id):
 def ensure_servers(session, ids):
     return [(id, ensure_server(session, id)) for id in ids]
 
-def ensure_role(session, id):
-    return get_or_create(session, Roles, id=id)
+def ensure_role(session, id, server_id):
+    return get_or_create(session, Roles, id=id, server_id=server_id)
 
-def ensure_roles(session, ids):
-    return [(id, ensure_role(session, id)) for id in ids]
+def ensure_roles(session, ids, server_id):
+    return [(id, ensure_role(session, id, server_id)) for id in ids]
 
 def ensure_user(session, id):
     return get_or_create(session, Users, id=id)

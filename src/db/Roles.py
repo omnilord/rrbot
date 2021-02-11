@@ -1,9 +1,14 @@
-from sqlalchemy import Column, Boolean, BigInteger, String, JSON
+from sqlalchemy import Column, Boolean, BigInteger, String, JSON, ForeignKey
+from sqlalchemy.orm import relationship
 from . import Base
 
 class Roles(Base):
     __tablename__ = 'roles'
     id = Column(BigInteger, primary_key = True, autoincrement=False)
+
+    # server
+    server_id = Column(BigInteger, ForeignKey('servers.id'))
+    server = relationship('Servers', back_populates="roles")
 
     # Allows this role to interact with this bot even if a
     # channel or server are muted.

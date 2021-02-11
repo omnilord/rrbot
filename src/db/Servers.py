@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Boolean, BigInteger, String, JSON, event
+from sqlalchemy.orm import relationship
 from . import Base, prefixed
 from configuration import update_live_prefix
 
@@ -19,7 +20,12 @@ class Servers(Base):
     # Storing Ad-hoc data made easy
     jsondata = Column(JSON)
 
+    # Important for displaying times
     timezone = Column(String(32), nullable=True, default='America/New_York')
+
+    # relationships
+    roles = relationship('Roles', back_populates='server')
+    channels = relationship('Channels', back_populates='server')
 
 
 @event.listens_for(Servers, 'after_update')

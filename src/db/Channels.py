@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Boolean, BigInteger, String, JSON, event
+from sqlalchemy import Column, Boolean, BigInteger, String, JSON, ForeignKey, event
+from sqlalchemy.orm import relationship
 from . import Base, prefixed
 from configuration import update_live_prefix
 
@@ -6,6 +7,10 @@ from configuration import update_live_prefix
 class Channels(Base):
     __tablename__ = 'channels'
     id = Column(BigInteger, primary_key = True, autoincrement=False)
+
+    # server
+    server_id = Column(BigInteger, ForeignKey('servers.id'))
+    server = relationship('Servers', back_populates="channels")
 
     # override the Global and Server prefixes with a custom
     # prefix specific to this channel

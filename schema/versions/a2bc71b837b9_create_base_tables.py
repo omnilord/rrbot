@@ -18,8 +18,16 @@ depends_on = None
 
 def upgrade():
     op.create_table(
+        'servers',
+        sa.Column('id', sa.BigInteger, primary_key=True, autoincrement=False),
+        sa.Column('prefix', sa.String(10), nullable=True),
+        sa.Column('muted', sa.Boolean, nullable=False, server_default='0'),
+        sa.Column('jsondata', sa.JSON)
+    )
+    op.create_table(
         'channels',
         sa.Column('id', sa.BigInteger, primary_key=True, autoincrement=False),
+        sa.Column('server_id', sa.BigInteger, nullable=False, sa.ForeignKey('servers.id')),
         sa.Column('prefix', sa.String(10), nullable=True),
         sa.Column('muted', sa.Boolean, nullable=False, server_default='0'),
         sa.Column('voiced', sa.Boolean, nullable=False, server_default='0'),
@@ -28,16 +36,10 @@ def upgrade():
     op.create_table(
         'roles',
         sa.Column('id', sa.BigInteger, primary_key=True, autoincrement=False),
+        sa.Column('server_id', sa.BigInteger, nullable=False, sa.ForeignKey('servers.id')),
         sa.Column('muted', sa.Boolean, nullable=False, server_default='0'),
         sa.Column('voiced', sa.Boolean, nullable=False, server_default='0'),
         sa.Column('moderator', sa.Boolean, nullable=False, server_default='0'),
-        sa.Column('jsondata', sa.JSON)
-    )
-    op.create_table(
-        'servers',
-        sa.Column('id', sa.BigInteger, primary_key=True, autoincrement=False),
-        sa.Column('prefix', sa.String(10), nullable=True),
-        sa.Column('muted', sa.Boolean, nullable=False, server_default='0'),
         sa.Column('jsondata', sa.JSON)
     )
     op.create_table(

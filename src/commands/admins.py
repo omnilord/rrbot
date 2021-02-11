@@ -35,7 +35,7 @@ class AdminCog(commands.Cog, name='Bot Administrator Commands'):
     @commands.command()
     @db_session(cog=True)
     async def cprefix(self, ctx, prefix):
-        channel = ensure_channel(ctx.db, ctx.channel.id)
+        channel = ensure_channel(ctx.db, ctx.channel.id, ctx.guild.id)
         channel.prefix = prefix
         ctx.db.add(channel)
         ctx.db.commit()
