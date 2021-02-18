@@ -13,6 +13,16 @@ do
     esac
 done
 
+
+mysql_conf=$(py3 ./src/configuration.py database_url)
+re='^[^:]+://([^:]+):([^@]+)@([^:]+):([0-9]+)/([A-Za-z][A-Za-z0-9_]+).*$'
+[[ $mysql_conf =~ $re ]] \
+  && username="${BASH_REMATCH[1]}" \
+  && password="${BASH_REMATCH[2]}" \
+  && host="${BASH_REMATCH[3]}" \
+  && port="${BASH_REMATCH[4]}" \
+  && dbname="${BASH_REMATCH[5]}"
+
 if [ $use_docker_database -eq 1 ]; then
   name='rrbot_db_1'
   echo "Checking docker for '$name' container..."
@@ -37,7 +47,7 @@ if [ $use_docker_database -eq 1 ]; then
     sentinel=0
     while [ $sentinel -lt 60 ]; do
       print '.'
-      if [[ $(mysqladmin ping --user=rrbot --password=rrbot --protocol=tcp --port=3306) == *"mysqld is alive"* ]]; then
+      if [[ $(mysqladmin ping --user=$username --password=$password --protocol=tcp --port=$port) == *"mysqld is alive"* ]]; then
         echo "MySQL detect alive."
         break
       fi
@@ -57,6 +67,18 @@ if [ $use_docker_database -eq 1 ]; then
 fi
 
 cd src
+
+sentinel=0
+until mysql -h $host -P $port -u$username -p$password -D $dbname -e ";"; do
+  ((sentinel++))
+  if [[ $sentinel -gt 10 ]]; then
+    echo "No MySQL connection."
+    exit 1
+  fi
+  sleep 1
+  printf "."
+done
+echo "MySQL found running."
 
 if [ $use_console -eq 1 ]; then
   py3 main.py -c

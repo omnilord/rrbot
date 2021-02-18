@@ -15,7 +15,7 @@ CONFIG = yaml.load("""
 ---
 # For localhost development, this is fine since it's a docker container
 # CHANGE FOR PRODUCTION
-database_url: 'mysql://rrbot:rrbot@localhost:3306/rrbot...'
+database_url: 'mysql://rrbot:rrbot@127.0.0.1:3306/rrbot...'
 mqtt_url: 'localhost'
 discord_client_id: 1234567890
 discord_client_secret: 'put your token here'
@@ -37,29 +37,46 @@ CONFIG['prefixes'] = PREFIXES = {}
 
 DB_URL = CONFIG['database_url']
 MQTT_URL = CONFIG['mqtt_url']
-TOKEN = CONFIG['discord_client_secret']
+CLIENTID = CONFIG['discord_client_id']
+SECRET = CONFIG['discord_client_secret']
+TOKEN = CONFIG['discord_bot_token']
+CALLBACK_ROOT = CONFIG['discord_oauth_callback_root']
 PREFIX = CONFIG['default_command_prefix'].lower()
 ADMINS = CONFIG['admins']
 LOG_LEVEL = CONFIG['log_level']
 DEBUG_CHANNEL = CONFIG['debug_channel']
 
 
+def generate_app_secret(p, size):
+    pool = string.ascii_letters + string.digits + string.punctuation
+    choices = ''.join((secrets.choice(pool) for _ in range(size)))
+    p.write_text(choices)
+    return choices
+
+def app_secret():
+    p = Path(os.path.join(ROOT, '.session_secret'))
+    if p.exists():
+        return p.read_text()
+    return generate_app_secret(p, 63)
+
 def update_live_prefix(id, prefix):
     global PREFIXES
-    print(PREFIXES)
     current_prefix = PREFIXES.get(id, None)
-    print('Update Prefix {} => {}, old => {}'.format(id, prefix, current_prefix))
     if prefix != current_prefix:
-        print("Differs")
         if prefix is None:
-            print('NONE')
             PREFIXES.delete(id)
         else:
-            print('CHANGE')
             PREFIXES[id] = prefix
-    else:
-        print('DAFUQ\n???\n???\n???')
 
+CONFIG['app_secret'] = APP_SECRET = app_secret()
 
 if __name__ == "__main__":
-    print(CONFIG)
+    import sys
+
+    conf_keys = CONFIG.keys()
+    if len(sys.argv) > 1:
+        for key in sys.argv[1:]:
+            if key in conf_keys:
+                print(CONFIG[key])
+    else:
+        print(CONFIG)
