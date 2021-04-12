@@ -21,7 +21,7 @@ class AdminCog(commands.Cog, name='Bot Administrator Commands'):
     @commands.command()
     async def shutdown(self, ctx):
         await ctx.send('Goodbye')
-        await ctx.bot.logout()
+        await ctx.bot.close()
 
     @commands.command(aliases=['sprefix'])
     @db_session(cog=True)

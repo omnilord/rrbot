@@ -5,6 +5,9 @@ tasks = {}
 DEFAULT_TASK_DELAY = 10
 
 
+# TODO: Persist tasks
+
+
 async def coroutine_runner(task, key, delay, *args):
     """
     internal execution of the coroutine task and cleanup

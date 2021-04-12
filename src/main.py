@@ -46,14 +46,20 @@ import mqtt_client
 
 # go live
 
-logging.info('All aboard!')
-if '-c' in sys.argv:
+def interactive_main():
     print('Notice: This is not a live connection to any asyncio resources.  Discord is not running, mqtt will not respond. Database is accessible, however.  This is a test console for base functionality only.')
     import code
     code.interact(local=dict(globals(), **locals()))
-else:
-    bot.run(TOKEN)
 
-logging.info('Shutting down')
-mqtt_client.shutdown()
-tasker.shutdown()
+
+
+if __name__ == '__main__':
+    logging.info('All aboard!')
+    if '-c' in sys.argv:
+        interactive_main()
+    else:
+        bot.run(TOKEN)
+
+    logging.info('Shutting down')
+    mqtt_client.shutdown()
+    tasker.shutdown()

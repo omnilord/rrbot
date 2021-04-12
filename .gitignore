@@ -5,3 +5,5 @@
 **/__pycache__
 configuration.py
 /.data
+.session_secret
+**/.DS_Store
