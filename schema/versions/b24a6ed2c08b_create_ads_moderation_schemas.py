@@ -46,7 +46,7 @@ def upgrade():
     op.create_table(
         'ads_warnings',
         sa.Column('id', sa.BigInteger, primary_key=True, autoincrement=True),
-        sa.Column('ads_messages_id', sa.BigInteger, nullable=False, index=True),
+        sa.Column('ads_message_id', sa.BigInteger, nullable=False, index=True),
         sa.Column('author_id', sa.BigInteger, nullable=False, index=True),
         sa.Column('created_at', sa.DateTime, nullable=False),
         sa.Column('created_by_id', sa.BigInteger, nullable=False),
