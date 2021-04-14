@@ -3,11 +3,14 @@
 use_docker_database=0
 use_console=0
 run_tests=0
-while getopts "Dct" opt
+run_mysql_console=0
+
+while getopts "Dcmt" opt
 do
     case $opt in
     (D) use_docker_database=1 ;;
     (c) use_console=1 ;;
+    (m) run_mysql_console=1 ;;
     (t) echo "Test harness not yet established." && exit 1 ;;
     (*) printf "Illegal option '-%s'\n" "$opt" && exit 1 ;;
     esac
@@ -82,6 +85,8 @@ echo "MySQL found running."
 
 if [ $use_console -eq 1 ]; then
   py3 main.py -c
+elif [ $run_mysql_console -eq 1 ]; then
+  mysql -h $host -P $port -u$username -p$password -D $dbname
 else
   py3 main.py
 fi
