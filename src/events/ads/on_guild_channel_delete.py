@@ -15,16 +15,14 @@ def setup(bot):
     @bot.listen()
     async def on_guild_channel_delete(discord_channel):
         db_session = Session()
-        channel = AdsChannels.one_channel(db_session, discord_channel.id)
-
-        if channel is not None:
-            ads = db_session.query(AdsMessages).filter_by(channel_id=channel.id, deleted_at=None)
-            ads_count = ads.count()
+        if channel := AdsChannels.one_channel(db_session, discord_channel.id):
+            ads_count = AdsMessages.count(db_session, channel_id=channel.id, deleted_at=None)
             channel.delete()
-            ads.update({ 'deleted_at': channel.deleted_at })
+            AdsMessages.delete_all(db_session, channel_id=channel.id, deleted_at=channel.deleted_at)
             db_session.commit()
             server = ensure_server(db_session, message.guild.id)
-            #notice = render_channel_deleted(channel, ads_count, server.timezone)
-            #await notify_ad_webhook(notice, channel, db_session, 'Channel Deleted')
+            notice = render_channel_deleted(channel, ads_count, server.timezone)
+            await notify_ad_webhook(notice, channel, 'Channel Deleted')
+            db_session.commit()
 
         db_session.close()

@@ -4,19 +4,13 @@ from db import (
     Session
 )
 from datetime import datetime, timedelta
-from discord import Webhook, AsyncWebhookAdapter
+from discord import Webhook, AsyncWebhookAdapter, NotFound, Forbidden
 import aiohttp, asyncio, logging, timeago
 from bot_utils import get_tz, bot_fetch
+from contextlib import asynccontextmanager
 
 
 OUTPUT_DATETIME_FORMAT = '%A, %D at %T%p %Z'
-NOTIFY_ON_EDIT = (
-    'age_gate',
-    'invite_code',
-    'invite_count',
-    'invite_server_id',
-    'invite_server_name'
-)
 
 
 # These are temporary templates, planning to migrate to embeds at a later date.
@@ -67,7 +61,10 @@ Message ID: {id}
 
 
 # CHANNEL TEMPLATES
-DELETED_CHANNEL_TEMPLATE = 'Channel `{name}` was deleted with {count} active ads.'
+DELETED_CHANNEL_TEMPLATE = """
+{ts}
+Channel `{name}` was deleted with {count} active ads.
+"""
 
 
 # Notification rendering functions
@@ -125,7 +122,10 @@ def render_age_gate(ad):
     if valid:
         return ad.age_gate
 
-    return f'Multiple potential age gates found: {ad.age_gate}'
+    if len(ages) > 1:
+        return f'**Multiple potential age gates found: {ad.age_gate}**'
+
+    return f'**Invalid age gate: {ad.age_gate}**'
 
 
 async def render_new_ad(bot, db_session, ad, message, channel, tzone_name=None):
@@ -153,9 +153,9 @@ async def render_ad_edited(bot, db_session, ad, message, channel, diffs, tzone_n
     age_gate = render_age_gate(ad)
 
     dkeys = diffs.keys()
-    ag_edited = ' **EDITED**' if 'age_gate' in dkeys else ''
+    ag_edited = '  **<<< EDITED**' if 'age_gate' in dkeys else ''
     invite_flag = any(k.startswith('invite_') for k in dkeys)
-    invite_edited = ' **EDITED**' if invite_flag else ''
+    invite_edited = '  **<<< EDITED**' if invite_flag else ''
     return EDITED_MESSAGE_TEMPLATE.format(
         ts=datetime.now(tz).strftime(OUTPUT_DATETIME_FORMAT),
         channel_name=channel.name,
@@ -185,10 +185,37 @@ async def render_ad_deleted(bot, ad, channel, tzone_name=None):
 
 
 def render_channel_deleted(channel, count, tzone_name=None):
-    return DELETED_CHANNEL_TEMPLATE.format(name=channel.name, count=count)
+    tz = get_tz(tzone_name)
+    ts = channel.deleted_at.astimezone(tz).strftime(OUTPUT_DATETIME_FORMAT)
+    return DELETED_CHANNEL_TEMPLATE.format(ts=ts, name=channel.name, count=count)
 
 
-async def notify_ad_webhook(msg, channel, db_session, username='RR Bot'):
+@asynccontextmanager
+async def ad_webhook(webhook_url):
+    async with aiohttp.ClientSession() as wh_session:
+        adapter = AsyncWebhookAdapter(wh_session)
+        webhook = Webhook.from_url(webhook_url, adapter=adapter)
+        yield webhook
+
+async def delete_ad_notification(channel, msg_id):
+    """
+    Call the webhook associated with the channel to delete a
+    notification message.
+    """
+
+    if channel is None or channel.webhook_url is None:
+        return
+
+    try:
+        async with ad_webhook(channel.webhook_url) as webhook:
+            return await webhook.delete_message(msg_id)
+    except (NotFound, Forbidden):
+        # NotFound means the notification was probably deleted already
+        # Forbidden probably means the webhook was modified recently
+        pass
+
+
+async def notify_ad_webhook(msg, channel, username='RR Bot'):
     """
     Call the webhook associated with the channel to create a
     notification message.
@@ -197,32 +224,8 @@ async def notify_ad_webhook(msg, channel, db_session, username='RR Bot'):
     if channel is None or channel.webhook_url is None:
         return
 
-    async with aiohttp.ClientSession() as wh_session:
-        try:
-            adapter = AsyncWebhookAdapter(wh_session)
-            webhook = Webhook.from_url(channel.webhook_url, adapter=adapter)
-            await webhook.send(msg, username=username)
-        except (NotFound, Forbidden):
-            channel.webhook_url = None
-            db_session.commit()
-
-
-def valid_change(ad, k, v):
-    return k in NOTIFY_ON_EDIT and  v != getattr(ad, k)
-
-
-async def diff_message(bot, ad, message, db_session):
-    """
-    parse the message content and diff the new parsed data
-    with the stored data from the last incarnation of this
-    ad.
-
-    returns:
-    tuple(key, old value, new value)
-    """
-
-    if message is None:
-        return None
-
-    new_fields = await AdsMessages.fields_from_discord_message(bot, message)
-    return dict([(k,(getattr(ad, k),v)) for k,v in new_fields.items() if valid_change(ad, k, v)])
+    try:
+        async with ad_webhook(channel.webhook_url) as webhook:
+            return await webhook.send(msg, username=username, wait=True)
+    except (NotFound, Forbidden):
+        channel.webhook_url = None

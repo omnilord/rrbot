@@ -7,6 +7,13 @@ import re
 from bot_utils import bot_fetch
 
 AGE_GATE_REGEXP = re.compile(r'(\d{2})\+')
+NOTIFY_ON_EDIT = (
+    'age_gate',
+    'invite_code',
+    'invite_count',
+    'invite_server_id',
+    'invite_server_name'
+)
 
 class AdsMessages(Base):
     __tablename__ = 'ads_messages'
@@ -35,12 +42,16 @@ class AdsMessages(Base):
     # for RR, all ads should have 18+ age (adults only) constraint; store the age values found.
     age_gate = Column(String(50), nullable=True)
 
+    # what was the last notification message sent to control for this ad
+    last_notice_id = Column(BigInteger, nullable=True, default=None)
+
 
 # INSTANCE METHODS
 
     def has_valid_age_gate(self):
         if self.age_gate is None:
             return (False, None)
+
         ages = [int(age) for age in AGE_GATE_REGEXP.findall(self.age_gate)]
         return (len(ages) == 1 and ages[0] >= 18, ages)
 
@@ -74,15 +85,40 @@ class AdsMessages(Base):
             return self.invite
         except AttributeError:
             self.invite = await bot_fetch(bot.fetch_invite, self.invite_code)
-            return self.invite
 
-    def amend(self, **fields):
-        updates = 0
-        for k, v in fields.items():
+    def valid_change(self, k, v):
+        return k in NOTIFY_ON_EDIT and  v != getattr(self, k)
+
+    async def diff_message(self, bot, message):
+        """
+        parse the message content and diff the new parsed data
+        with the stored data from the last incarnation of this
+        ad.
+
+        returns:
+        list(tuple(key, old value, new value))
+        """
+
+        if message is None:
+            return
+
+        new_fields = await AdsMessages.fields_from_discord_message(bot, message)
+        for k, v in new_fields.items():
+            if self.valid_change(k, v):
+                yield (k, (getattr(self, k), v))
+
+    async def amend(self, bot, message):
+        """
+        process provided fields for updating the instance if necessary
+        """
+
+        diffs = {}
+        async for k, v in self.diff_message(bot, message):
             if hasattr(self, k) and getattr(self, k) != v:
-                updates += 1
-                setattr(self, k, v)
-        return updates
+                diffs[k] = v
+                setattr(self, k, v[1])
+
+        return diffs
 
 
 # CLASS METHODS
@@ -168,3 +204,28 @@ class AdsMessages(Base):
 
     def one_message(db_session, message_id):
         return db_session.query(AdsMessages).get(message_id)
+
+
+    def clear_notice(db_session, message_id):
+        db_session.query(AdsMessages) \
+            .filter(AdsMessages.last_notice_id==message_id) \
+            .update({ AdsMessages.last_notice_id: None })
+
+
+
+    def delete_all(db_session, channel_id, deleted_ts=datetime.now):
+        filters = [
+            AdsMessages.channel_id==channel_id,
+            AdsMessages.deleted_at==None
+        ]
+        ads_count = AdsMessages.count(db_session, *filters)
+        if ads_count > 0:
+            db_session.query(AdsMessages).filter(*filters).update({
+                AdsMessages.deleted_at: deleted_ts() if callable(deleted_ts) else deleted_ts
+            })
+
+        return ads_count
+
+
+    def count(db_session, *filter):
+        return db_session.query(AdsMessages).filter(*filter).count()

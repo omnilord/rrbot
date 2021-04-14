@@ -10,5 +10,5 @@ def setup(bot):
             return
 
         # TODO check for ads by this member, then notify
-        # await notify_ad_webhook(notice, channel, db_session, 'Ad User Left Server')
+        # await notify_ad_webhook(notice, channel, 'Ad User Left Server')
         pass

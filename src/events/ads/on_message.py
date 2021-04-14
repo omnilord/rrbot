@@ -17,14 +17,14 @@ def setup(bot):
             return
 
         db_session = Session()
-        channel = AdsChannels.one_channel(db_session, message.channel.id)
-
-        if channel is not None:
+        if channel := AdsChannels.one_channel(db_session, message.channel.id):
             ad = await AdsMessages.from_discord_message(db_session, bot, message)
             db_session.add(ad)
             db_session.commit()
             server = ensure_server(db_session, message.guild.id)
             notice = await render_new_ad(bot, db_session, ad, message, channel, server.timezone)
-            await notify_ad_webhook(notice, channel, db_session, 'New Ad')
+            notice_message = await notify_ad_webhook(notice, channel, 'New Ad')
+            ad.last_notice_id = notice_message.id
+            db_session.commit()
 
         db_session.close()

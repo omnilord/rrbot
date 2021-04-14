@@ -1,4 +1,4 @@
-import os, sys, logging
+import os, sys, logging, pprint
 from configuration import ADMINS, PREFIXES, PREFIX, DEBUG_CHANNEL
 from discord.ext import commands
 from discord import NotFound, Forbidden, HTTPException, InvalidData
@@ -6,6 +6,8 @@ from pathlib import Path
 from db import Session, bot_session, Servers, Channels, Users, Roles
 from functools import wraps
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+pp = pprint.PrettyPrinter(indent=4).pprint
 
 """
 Core utlities
@@ -53,7 +55,7 @@ def prefix_operator(bot, message):
 Auxiliary utiltizes
 """
 
-def _is_server_moderator(d_user):
+def _is_server_moderator(d_user, d_guild):
     user_id = d_user.id
 
     if _is_bot_admin(user_id):
@@ -64,7 +66,10 @@ def _is_server_moderator(d_user):
         return True
 
     for urole in d_user.roles:
-        modrole = bot_session.query(Roles).filter(Roles.id == urole.id).first()
+        modrole = bot_session.query(Roles).filter(
+            Roles.id == urole.id,
+            server_id == d_guild.id
+        ).first()
         if modrole is not None and modrole.moderator:
             return True
 
@@ -134,7 +139,8 @@ async def notify_debug(bot, msg):
     if channel is None:
         logging.warning('Unable to send message to debug channel `{}`:\n{}'.format(DEBUG_CHANNEL, msg))
     else:
-        await channel.send('I am alive!')
+        logging.info('Sent message to debug channel `{}`:\n{}'.format(DEBUG_CHANNEL, msg))
+        await channel.send(msg)
 
 def get_tz(tzone_name=None):
     if tzone_name is None:
