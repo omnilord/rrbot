@@ -25,12 +25,12 @@ class AdsChannels(Base):
     jsondata = Column(JSON)
 
     def delete_ads(self):
-        AdsMessages.delete_all(inspect(self).session, channel_id=self.id)
+        return AdsMessages.delete_all(inspect(self).session, channel_id=self.id, deleted_at=self.deleted_at)
 
     def delete(self):
-        self.delete_ads()
-        # self.webhook_url = None # need webhook _after_ the channel is deleted for notify
         self.deleted_at = datetime.now()
+        return self.delete_ads()
+        # self.webhook_url = None # need webhook _after_ the channel is deleted for notify
 
     def discord_channel(self, bot):
         try:
@@ -44,29 +44,39 @@ class AdsChannels(Base):
     async def reindex(self, bot):
         d_chan = self.discord_channel(bot)
 
-        index = { 'new': [], 'edited': [], 'deleted': [] }
+        index = []
 
         end = None
         async for m in d_chan.history(limit=1):
             end = m
 
-        edits = []
         if end is None:
             # All the messages were removed, but the channel remains
-            self.delete_ads()
+            if deleted := self.delete_ads():
+                index.extend([ { 'action': 'deleted', 'ad': ad } for ad in deleted ])
+                db_session.commit()
         else:
             last = None
+            db_session = inspect(self).session
             while last != end:
                 async for m in d_chan.history(after=last, limit=100, oldest_first=True):
                     last = m
-                    edits.append(m.id)
+                    if ad := AdsMessages.one_message(db_session, m.id):
+                        # TODO deduplicate with on_raw_message_edit
+                        if diff := await ad.amend(db_session, m):
+                            index.append({ 'action': 'edited', 'ad': ad, 'message': m })
+                            db_session.commit()
+                    else:
+                        # TODO deduplicate with on_message
+                        ad = await AdsMessages.from_discord_message(db_session, bot, message)
+                        db_session.add(ad)
+                        index.append({ 'action': 'added', 'ad': ad, 'message': m })
+                        db_session.commit()
 
-            # TODO: update messages in database to deleted_at=NOW()
-            #       where not in index and created_at < end.created_at;
-            #       if there is no index of the message, it was deleted,
-            #       but we only want to do messages before we cut off (end.created_at)
-            # TODO: if a message is found in discord that has a deleted_at datetime,
-            #       update deleted_at to null.
+            id_list = [mid for ad in index for mid in [ad['id'], ad['last_notice_id']] if mid is not None]
+            if deleted := AdsMessages.delete_all(db_session, AdsMessages.id.notin_(id_list), channel_id=channel.id):
+                index.extend([ { 'action': 'deleted', 'ad': ad } for ad in deleted ])
+                db_session.commit()
 
         return index
 

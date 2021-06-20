@@ -3,8 +3,7 @@ from db import (
     UTC_TZ,
     AdsMessages,
     AdsChannels,
-    Session,
-    ensure_server
+    Session
 )
 from . import render_channel_deleted, notify_ad_webhook
 
@@ -16,12 +15,9 @@ def setup(bot):
     async def on_guild_channel_delete(discord_channel):
         db_session = Session()
         if channel := AdsChannels.one_channel(db_session, discord_channel.id):
-            ads_count = AdsMessages.count(db_session, channel_id=channel.id, deleted_at=None)
-            channel.delete()
-            AdsMessages.delete_all(db_session, channel_id=channel.id, deleted_at=channel.deleted_at)
+            deleted_ads = channel.delete()
             db_session.commit()
-            server = ensure_server(db_session, message.guild.id)
-            notice = render_channel_deleted(channel, ads_count, server.timezone)
+            notice = render_channel_deleted(db_session, channel, len(deleted_ads))
             await notify_ad_webhook(notice, channel, 'Channel Deleted')
             db_session.commit()
 

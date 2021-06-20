@@ -18,8 +18,7 @@ def setup(bot):
             channel = AdsChannels.one_channel(db_session, payload.channel_id)
             ad.delete()
             db_session.commit()
-            server = ensure_server(db_session, payload.guild_id)
-            notice = await render_ad_deleted(bot, ad, channel, server.timezone)
+            notice = await render_ad_deleted(db_session, bot, ad, channel)
             tasker.deregister(f'edit_message_{ad.id}')
             await notify_ad_webhook(notice, channel, 'Ad Deleted')
         else:

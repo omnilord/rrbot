@@ -28,8 +28,7 @@ def setup(bot):
 
             if diffs := await ad.amend(bot, message):
                 db_session.commit()
-                server = ensure_server(db_session, channel.server_id)
-                notice = await render_ad_edited(bot, db_session, ad, message, channel, diffs, server.timezone)
+                notice = await render_ad_edited(bot, db_session, ad, message, channel, diffs)
                 #key = f'edit_message_{ad.id}'
                 #message = await tasker.asyncregister(notify_ad_webhook, notice, channel, 'Ad Edited', key=key, delay=30)
                 await asyncio.sleep(30)

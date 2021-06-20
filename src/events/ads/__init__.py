@@ -1,7 +1,7 @@
 from db import (
     UTC_TZ,
     AdsMessages,
-    Session
+    ensure_server
 )
 from datetime import datetime, timedelta
 from discord import Webhook, AsyncWebhookAdapter, NotFound, Forbidden
@@ -68,6 +68,10 @@ Channel `{name}` was deleted with {count} active ads.
 
 
 # Notification rendering functions
+def fetch_server_tz(db_session, server_id):
+    server = ensure_server(db_session, server_id)
+    return get_tz(server.timezone)
+
 def time_labels_from_utc(field, tz):
     field_utc = field.replace(tzinfo=UTC_TZ)
     ta = timeago.format(field_utc, datetime.utcnow().replace(tzinfo=UTC_TZ))
@@ -128,8 +132,8 @@ def render_age_gate(ad):
     return f'**Invalid age gate: {ad.age_gate}**'
 
 
-async def render_new_ad(bot, db_session, ad, message, channel, tzone_name=None):
-    tz = get_tz(tzone_name)
+async def render_new_ad(bot, db_session, ad, message, channel):
+    tz = fetch_server_tz(db_session, channel.server_id)
     invite = await render_invite(bot, ad, tz)
     timers = render_timers(db_session, ad, tz)
     age_gate = render_age_gate(ad)
@@ -146,8 +150,8 @@ async def render_new_ad(bot, db_session, ad, message, channel, tzone_name=None):
     )
 
 
-async def render_ad_edited(bot, db_session, ad, message, channel, diffs, tzone_name=None):
-    tz = get_tz(tzone_name)
+async def render_ad_edited(bot, db_session, ad, message, channel, diffs):
+    tz = fetch_server_tz(db_session, channel.server_id)
     invite = await render_invite(bot, ad, tz)
     timers = render_timers(db_session, ad, tz)
     age_gate = render_age_gate(ad)
@@ -171,8 +175,8 @@ async def render_ad_edited(bot, db_session, ad, message, channel, diffs, tzone_n
     )
 
 
-async def render_ad_deleted(bot, ad, channel, tzone_name=None):
-    tz = get_tz(tzone_name)
+async def render_ad_deleted(bot, db_session, ad, channel):
+    tz = fetch_server_tz(db_session, channel.server_id)
     invite = await render_invite(bot, ad, tz)
     return DELETED_MESSAGE_TEMPLATE.format(
         ts=ad.deleted_at.astimezone(tz).strftime(OUTPUT_DATETIME_FORMAT),
@@ -184,8 +188,8 @@ async def render_ad_deleted(bot, ad, channel, tzone_name=None):
     )
 
 
-def render_channel_deleted(channel, count, tzone_name=None):
-    tz = get_tz(tzone_name)
+def render_channel_deleted(db_session, channel, count):
+    tz = fetch_server_tz(db_session, channel.server_id)
     ts = channel.deleted_at.astimezone(tz).strftime(OUTPUT_DATETIME_FORMAT)
     return DELETED_CHANNEL_TEMPLATE.format(ts=ts, name=channel.name, count=count)
 

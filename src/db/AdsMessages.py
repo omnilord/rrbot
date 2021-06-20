@@ -213,18 +213,20 @@ class AdsMessages(Base):
 
 
 
-    def delete_all(db_session, channel_id, deleted_ts=datetime.now):
+    def delete_all(db_session, channel_id, deleted_ts=datetime.now, *additional_filters):
         filters = [
             AdsMessages.channel_id==channel_id,
-            AdsMessages.deleted_at==None
+            AdsMessages.deleted_at==None,
+            *addtional_filters
         ]
-        ads_count = AdsMessages.count(db_session, *filters)
-        if ads_count > 0:
-            db_session.query(AdsMessages).filter(*filters).update({
+        ads = db_session.query(AdsMessages).filter(*filters).all()
+        if len(ads) > 0:
+            ads_ids = [ad.id for ad in ads]
+            db_session.query(AdsMessages).filter(AdsMessages.id.in_(ads_ids)).update({
                 AdsMessages.deleted_at: deleted_ts() if callable(deleted_ts) else deleted_ts
             })
 
-        return ads_count
+        return ads
 
 
     def count(db_session, *filter):

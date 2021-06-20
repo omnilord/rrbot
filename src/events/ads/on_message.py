@@ -2,8 +2,7 @@ import logging
 from db import (
     AdsChannels,
     AdsMessages,
-    Session,
-    ensure_server
+    Session
 )
 from . import render_new_ad, notify_ad_webhook
 
@@ -21,8 +20,7 @@ def setup(bot):
             ad = await AdsMessages.from_discord_message(db_session, bot, message)
             db_session.add(ad)
             db_session.commit()
-            server = ensure_server(db_session, message.guild.id)
-            notice = await render_new_ad(bot, db_session, ad, message, channel, server.timezone)
+            notice = await render_new_ad(bot, db_session, ad, message, channel)
             notice_message = await notify_ad_webhook(notice, channel, 'New Ad')
             ad.last_notice_id = notice_message.id
             db_session.commit()
