@@ -3,6 +3,15 @@
 TODO:
 Instructions for use
 
+## Setup checklist
+
+* mysql-client
+  MacOS: `brew install mysql-client`
+* python requirements
+  `py3 -m pip install -r requirements.txt`
+* docker (optional)
+  `docker compose up -d`
+
 
 ## Contributing
 
