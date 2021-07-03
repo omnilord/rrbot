@@ -17,7 +17,12 @@ do
 done
 
 
-mysql_conf=$(py3 ./src/configuration.py database_url)
+mysql_conf=$(python3 ./src/configuration.py database_url)
+if [ -z $mysql_conf ]; then
+  echo "Unable to assertain MySQL configuration."
+  exit 1
+fi
+
 re='^[^:]+://([^:]+):([^@]+)@([^:]+):([0-9]+)/([A-Za-z][A-Za-z0-9_]+).*$'
 [[ $mysql_conf =~ $re ]] \
   && username="${BASH_REMATCH[1]}" \
@@ -84,11 +89,11 @@ done
 echo "MySQL found running."
 
 if [ $use_console -eq 1 ]; then
-  py3 main.py -c
+  python3 main.py -c
 elif [ $run_mysql_console -eq 1 ]; then
   mysql -h $host -P $port -u$username -p$password -D $dbname
 else
-  py3 main.py
+  python3 main.py
 fi
 
 if [ $use_docker_database -eq 1 ]; then
