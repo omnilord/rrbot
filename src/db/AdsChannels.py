@@ -74,7 +74,7 @@ class AdsChannels(Base):
                         db_session.commit()
 
             id_list = [mid for ad in index for mid in [ad['id'], ad['last_notice_id']] if mid is not None]
-            if deleted := AdsMessages.delete_all(db_session, AdsMessages.id.notin_(id_list), channel_id=channel.id):
+            if deleted := AdsMessages.delete_all(db_session, AdsMessages.id.notin_(id_list), channel_id=self.id):
                 index.extend([ { 'action': 'deleted', 'ad': ad } for ad in deleted ])
                 db_session.commit()
 
