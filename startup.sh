@@ -5,16 +5,21 @@ use_console=0
 run_tests=0
 run_mysql_console=0
 
-while getopts "Dcmt" opt
-do
+while getopts "Dcmt" opt; do
     case $opt in
     (D) use_docker_database=1 ;;
     (c) use_console=1 ;;
     (m) run_mysql_console=1 ;;
-    (t) echo "Test harness not yet established." && exit 1 ;;
+    (t) run_tests=1 ;;
     (*) printf "Illegal option '-%s'\n" "$opt" && exit 1 ;;
     esac
 done
+
+
+if [[ $run_tests -eq 1 ]]; then
+  echo "Test harness not yet established."
+  exit 1
+fi
 
 
 mysql_conf=$(python3 ./src/configuration.py database_url)
