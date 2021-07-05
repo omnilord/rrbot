@@ -1,7 +1,7 @@
 import logging
 from discord.ext import commands
 from bot_utils import _is_server_moderator, db_session
-from db import AdsChannels, AdsMessages
+from db import AdsChannels, AdsMessages, AdsWarnings
 
 logging.info('Loading `ads command`')
 
@@ -55,7 +55,7 @@ class AdsCog(commands.Cog, name='Ads Command'):
         No provided parameters will yield a report of the state of ads
         consisting of a list of channels, states, and their basic statistics
 
-        Additional paramters [add, remove, sync,  warn, notify]
+        Additional paramters [add, remove, sync, warn, notify]
         will forward to the respective subcommand in the ads command group.
         """
 

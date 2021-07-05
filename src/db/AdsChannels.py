@@ -24,13 +24,16 @@ class AdsChannels(Base):
     # Storing Ad-hoc data made easy
     jsondata = Column(JSON)
 
+
     def delete_ads(self):
         return AdsMessages.delete_all(inspect(self).session, channel_id=self.id, deleted_at=self.deleted_at)
+
 
     def delete(self):
         self.deleted_at = datetime.now()
         return self.delete_ads()
         # self.webhook_url = None # need webhook _after_ the channel is deleted for notify
+
 
     def discord_channel(self, bot):
         try:
@@ -40,6 +43,7 @@ class AdsChannels(Base):
             if self._discord_channel is None:
                 self.delete()
             return self._discord_channel
+
 
     async def reindex(self, bot):
         d_chan = self.discord_channel(bot)
@@ -74,7 +78,7 @@ class AdsChannels(Base):
                         db_session.commit()
 
             id_list = [mid for ad in index for mid in [ad['id'], ad['last_notice_id']] if mid is not None]
-            if deleted := AdsMessages.delete_all(db_session, AdsMessages.id.notin_(id_list), channel_id=self.id):
+            if deleted := AdsMessages.delete_all(db_session, AdsMessages.id.not_in(id_list), AdsMessages.channel_id == self.id):
                 index.extend([ { 'action': 'deleted', 'ad': ad } for ad in deleted ])
                 db_session.commit()
 

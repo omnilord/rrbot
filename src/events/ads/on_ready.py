@@ -42,4 +42,3 @@ def setup(bot):
                 notice = render_channel_deleted(channel, ads_count, server.timezone)
                 await notify_ad_webhook(notice, channel, 'Channel Deleted')
                 db_session.commit()
-
