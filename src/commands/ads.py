@@ -98,7 +98,7 @@ class AdsCog(commands.Cog, name='Ads Command'):
         await ctx.send(ads_remove_channel(ctx, channel_id))
 
 
-    @ads.command(ialiases=['warning', 'warnings'])
+    @ads.command(aliases=['warning', 'warnings'])
     @db_session(cog=True)
     async def warn(self, ctx, message_id=None):
         """
@@ -109,7 +109,7 @@ class AdsCog(commands.Cog, name='Ads Command'):
         await ctx.send(ads_warning(ctx, message_id))
 
 
-    @ads.command(ialiases=['cntl', 'control', 'channel'])
+    @ads.command(aliases=['cntl', 'control', 'channel'])
     @db_session(cog=True)
     async def webhook(self, ctx, webhook_url):
         """

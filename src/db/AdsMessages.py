@@ -212,12 +212,11 @@ class AdsMessages(Base):
             .update({ AdsMessages.last_notice_id: None })
 
 
-
     def delete_all(db_session, channel_id, deleted_ts=datetime.now, *additional_filters):
         filters = [
             AdsMessages.channel_id==channel_id,
             AdsMessages.deleted_at==None,
-            *addtional_filters
+            *additional_filters
         ]
         ads = db_session.query(AdsMessages).filter(*filters).all()
         if len(ads) > 0:

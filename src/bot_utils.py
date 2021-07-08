@@ -16,6 +16,7 @@ Core utlities
 class RRBotException(Exception):
     pass
 
+
 def load_extension_directory(bot, *ext):
     cwd = os.getcwd()
     ext_path = os.path.join(cwd, *ext)
@@ -46,10 +47,12 @@ def load_prefixes():
 
     logging.info('Preloaded prefixes:\n{}'.format(PREFIXES))
 
+
 def prefix_operator(bot, message):
     channel_id = message.channel.id
     server_id = message.guild.id
     return PREFIXES.get(channel_id, PREFIXES.get(server_id, PREFIX))
+
 
 """
 Auxiliary utiltizes
@@ -75,8 +78,10 @@ def _is_server_moderator(d_user, d_guild):
 
     return False
 
+
 def _is_bot_admin(user_id):
     return user_id in ADMINS
+
 
 def is_bot_admin():
     """
@@ -86,10 +91,12 @@ def is_bot_admin():
         return _is_bot_admin(ctx.message.author)
     return commands.check(predicate)
 
+
 def _db_session(ctx):
     ctx.db = Session()
 
-def cmd_db_wrapper(fn):
+
+def cmd_db_wrapper(db_errors_silent):
     def _cmd_db_wrapper(fn):
         """
         wrapper to inject a command context with a database session
@@ -107,7 +114,8 @@ def cmd_db_wrapper(fn):
         return predicate
     return _cmd_db_wrapper
 
-def cog_db_wrapper(fn):
+
+def cog_db_wrapper(db_errors_silent):
     def _cog_db_wrapper(fn):
         """
         wrapper to inject a cog command context with a database session
@@ -125,14 +133,17 @@ def cog_db_wrapper(fn):
         return predicate
     return _cog_db_wrapper
 
+
 def db_session(cog=False, db_errors_silent=True):
     return cog_db_wrapper(db_errors_silent) if cog else cmd_db_wrapper(db_errors_silent)
+
 
 async def bot_fetch(fn, *args, **kwargs):
     try:
         return await fn(*args, **kwargs)
     except (NotFound, Forbidden, HTTPException, InvalidData):
         return None
+
 
 async def notify_debug(bot, msg):
     channel = await bot_fetch(bot.fetch_channel, DEBUG_CHANNEL)
@@ -142,6 +153,7 @@ async def notify_debug(bot, msg):
         logging.info('Sent message to debug channel `{}`:\n{}'.format(DEBUG_CHANNEL, msg))
         await channel.send(msg)
 
+
 def get_tz(tzone_name=None):
     if tzone_name is None:
         tzone_name = 'America/New_York'
@@ -149,5 +161,3 @@ def get_tz(tzone_name=None):
         return ZoneInfo(tzone_name)
     except ZoneInfoNotFoundError:
         return ZoneInfo('America/New_York')
-
-

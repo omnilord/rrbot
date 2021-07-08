@@ -26,11 +26,13 @@ class AdsChannels(Base):
 
 
     def delete_ads(self):
-        return AdsMessages.delete_all(inspect(self).session, channel_id=self.id, deleted_at=self.deleted_at)
+        db_session = inspect(self).session
+        filters = [ AdsMessages.channel_id == self.id, AdsMessages.deleted_at == self.deleted_at ]
+        return AdsMessages.delete_all(db_session, *filters)
 
 
-    def delete(self):
-        self.deleted_at = datetime.now()
+    def delete(self, deleted_ts=datetime.now):
+        self.deleted_at = deleted_ts()
         return self.delete_ads()
         # self.webhook_url = None # need webhook _after_ the channel is deleted for notify
 
@@ -67,7 +69,7 @@ class AdsChannels(Base):
                     last = m
                     if ad := AdsMessages.one_message(db_session, m.id):
                         # TODO deduplicate with on_raw_message_edit
-                        if diff := await ad.amend(db_session, m):
+                        if diff := await ad.amend(bot, m):
                             index.append({ 'action': 'edited', 'ad': ad, 'message': m })
                             db_session.commit()
                     else:
@@ -78,7 +80,8 @@ class AdsChannels(Base):
                         db_session.commit()
 
             id_list = [mid for ad in index for mid in [ad['id'], ad['last_notice_id']] if mid is not None]
-            if deleted := AdsMessages.delete_all(db_session, AdsMessages.id.not_in(id_list), AdsMessages.channel_id == self.id):
+            filters = [ AdsMessages.id.not_in(id_list), AdsMessages.channel_id == self.id ]
+            if deleted := AdsMessages.delete_all(db_session, *filters):
                 index.extend([ { 'action': 'deleted', 'ad': ad } for ad in deleted ])
                 db_session.commit()
 
