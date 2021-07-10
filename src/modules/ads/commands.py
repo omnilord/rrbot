@@ -2,32 +2,9 @@ import logging
 from discord.ext import commands
 from bot_utils import _is_server_moderator, db_session
 from db import AdsChannels, AdsMessages, AdsWarnings
+from . import ads_report, ads_sync, ads_add_channel, ads_remove_channel, ads_warn, ads_webhook
 
 logging.info('Loading `ads command`')
-
-def ads_report(ctx):
-    return 'Report!'
-
-
-def ads_sync(ctx):
-    return 'Needs data'
-
-
-def ads_add_channel(ctx, channel_id):
-    return 'Needs new channel'
-
-
-def ads_remove_channel(ctx, channel_id, delete=False):
-    return 'Needs old channel' if delete else 'Needs current channel'
-
-
-def ads_warn(ctx, message_id):
-    return 'This is warning #x for this user/server combo.'
-
-
-def ads_webhook(ctx, message_id):
-    return 'Set or delete the ads webhook for a channel.'
-
 
 class AdsCog(commands.Cog, name='Ads Command'):
     def __init__(self, bot):

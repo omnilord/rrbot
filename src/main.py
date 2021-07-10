@@ -39,7 +39,7 @@ import task_scheduler as tasker
 
 # load the extensions
 
-for ext in ['commands', 'events']:
+for ext in ['commands', 'events', 'modules']:
     load_extension_directory(bot, ext)
 
 import mqtt_client
